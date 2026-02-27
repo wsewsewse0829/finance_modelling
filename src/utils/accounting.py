@@ -38,6 +38,7 @@ def generateTrialBalance(
 ) -> pd.DataFrame:
     """
     根据序时账生成科目余额表
+    实现连续编报：本期期初余额 = 上期期末余额
     """
     if general_ledger.empty:
         return pd.DataFrame(columns=[
@@ -63,19 +64,50 @@ def generateTrialBalance(
     # 获取科目余额方向
     account_direction = accounts_str.set_index("account_code")["balance_direction"].to_dict()
 
-    # 计算期末余额（简化版：期初余额暂设为0，后续可扩展）
-    summary["begin_balance"] = 0.0
-    summary["end_balance"] = summary.apply(
-        lambda row: _calculateEndBalance(
-            row["begin_balance"],
-            row["debit_total"],
-            row["credit_total"],
-            account_direction.get(row["account_code"], "借")
-        ),
-        axis=1
-    )
-
-    return summary[["account_code", "account_name", "period",
+    # 获取所有期间并按时间排序
+    periods = sorted(summary["period"].unique())
+    
+    # 对每个科目按时间顺序计算期初和期末余额
+    result_rows = []
+    account_end_balance = {}  # 记录每个科目的上期期末余额
+    
+    for period in periods:
+        period_data = summary[summary["period"] == period]
+        
+        for _, row in period_data.iterrows():
+            account_code = row["account_code"]
+            account_name = row["account_name"]
+            debit_total = row["debit_total"]
+            credit_total = row["credit_total"]
+            balance_direction = account_direction.get(account_code, "借")
+            
+            # 期初余额 = 上期期末余额（如果没有上期，则为0）
+            begin_balance = account_end_balance.get(account_code, 0.0)
+            
+            # 计算期末余额
+            end_balance = _calculateEndBalance(
+                begin_balance,
+                debit_total,
+                credit_total,
+                balance_direction
+            )
+            
+            # 保存期末余额供下期使用
+            account_end_balance[account_code] = end_balance
+            
+            result_rows.append({
+                "account_code": account_code,
+                "account_name": account_name,
+                "period": period,
+                "begin_balance": begin_balance,
+                "debit_total": debit_total,
+                "credit_total": credit_total,
+                "end_balance": end_balance
+            })
+    
+    result_df = pd.DataFrame(result_rows)
+    
+    return result_df[["account_code", "account_name", "period",
                      "begin_balance", "debit_total", "credit_total", "end_balance"]]
 
 
