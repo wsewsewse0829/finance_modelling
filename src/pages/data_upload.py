@@ -176,18 +176,60 @@ def _renderLedgerView() -> None:
 
     # 清空数据按钮
     st.markdown("---")
-    if st.button("🗑️ 清空所有序时账数据", type="secondary"):
-        saveGeneralLedger(pd.DataFrame(columns=[
-            "id", "entry_date", "voucher_no", "account_code",
-            "account_name", "debit_amount", "credit_amount", "summary", "user_id"
-        ]))
-        saveTrialBalance(pd.DataFrame(columns=[
-            "account_code", "account_name", "period",
-            "begin_balance", "debit_total", "credit_total", "end_balance"
-        ]))
-        saveReport(pd.DataFrame(columns=["item", "period", "amount", "report_type"]))
-        st.success("已清空所有数据。")
-        st.rerun()
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🗑️ 清空所有序时账数据", type="secondary"):
+            saveGeneralLedger(pd.DataFrame(columns=[
+                "id", "entry_date", "voucher_no", "account_code",
+                "account_name", "debit_amount", "credit_amount", "summary", "user_id"
+            ]))
+            saveTrialBalance(pd.DataFrame(columns=[
+                "account_code", "account_name", "period",
+                "begin_balance", "debit_total", "credit_total", "end_balance"
+            ]))
+            saveReport(pd.DataFrame(columns=["item", "period", "amount", "report_type"]))
+            st.success("已清空所有数据。")
+            st.rerun()
+    
+    with col2:
+        # 按会计期间删除
+        st.markdown("#### 按会计期间删除")
+        # 提取会计期间
+        ledger["period"] = pd.to_datetime(ledger["entry_date"]).dt.strftime("%Y-%m")
+        periods = sorted(ledger["period"].unique())
+        
+        if periods:
+            selected_period = st.selectbox("选择要删除的会计期间", periods, key="delete_period")
+            if st.button("🗑️ 删除选中期间数据", type="secondary", key="delete_period_btn"):
+                # 删除选定期间的数据
+                filtered_ledger = ledger[ledger["period"] != selected_period].copy()
+                # 移除临时列
+                if "period" in filtered_ledger.columns:
+                    filtered_ledger = filtered_ledger.drop(columns=["period"])
+                
+                # 保存过滤后的序时账
+                saveGeneralLedger(filtered_ledger)
+                
+                # 重新生成科目余额表和会计报表
+                accounts = loadAccounts()
+                if not filtered_ledger.empty:
+                    trial_balance = generateTrialBalance(filtered_ledger, accounts)
+                    saveTrialBalance(trial_balance)
+                    report = generateReport(trial_balance, accounts)
+                    saveReport(report)
+                else:
+                    # 如果没有数据，清空报表
+                    saveTrialBalance(pd.DataFrame(columns=[
+                        "account_code", "account_name", "period",
+                        "begin_balance", "debit_total", "credit_total", "end_balance"
+                    ]))
+                    saveReport(pd.DataFrame(columns=["item", "period", "amount", "report_type"]))
+                
+                st.success(f"已删除 {selected_period} 期间的数据。")
+                st.rerun()
+        else:
+            st.info("暂无会计期间数据。")
 
 
 def _renderTemplateDownload() -> None:
