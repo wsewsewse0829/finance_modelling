@@ -1,0 +1,174 @@
+"""
+会计计算工具
+负责序时账校验、科目余额表生成、会计报表生成等核心会计逻辑
+"""
+
+import pandas as pd
+import numpy as np
+from typing import Tuple, List
+
+
+def validateJournalEntries(df: pd.DataFrame) -> Tuple[bool, List[str]]:
+    """
+    校验序时账借贷是否平衡
+    返回: (是否平衡, 错误信息列表)
+    """
+    errors = []
+
+    if df.empty:
+        return True, []
+
+    # 按分录号分组校验每笔分录借贷是否平衡
+    grouped = df.groupby("voucher_no")
+    for voucher_no, group in grouped:
+        debit_sum = group["debit_amount"].sum()
+        credit_sum = group["credit_amount"].sum()
+        if abs(debit_sum - credit_sum) > 0.01:
+            errors.append(
+                f"分录 {voucher_no}: 借方合计 {debit_sum:.2f} ≠ 贷方合计 {credit_sum:.2f}"
+            )
+
+    is_balanced = len(errors) == 0
+    return is_balanced, errors
+
+
+def generateTrialBalance(
+    general_ledger: pd.DataFrame,
+    accounts: pd.DataFrame
+) -> pd.DataFrame:
+    """
+    根据序时账生成科目余额表
+    """
+    if general_ledger.empty:
+        return pd.DataFrame(columns=[
+            "account_code", "account_name", "period",
+            "begin_balance", "debit_total", "credit_total", "end_balance"
+        ])
+
+    # 添加期间列
+    gl = general_ledger.copy()
+    gl["period"] = pd.to_datetime(gl["entry_date"]).dt.strftime("%Y-%m")
+
+    # 按科目和期间汇总
+    summary = gl.groupby(["account_code", "account_name", "period"]).agg(
+        debit_total=("debit_amount", "sum"),
+        credit_total=("credit_amount", "sum"),
+    ).reset_index()
+
+    # 确保科目编码为字符串类型以保持一致性
+    summary["account_code"] = summary["account_code"].astype(str)
+    accounts_str = accounts.copy()
+    accounts_str["account_code"] = accounts_str["account_code"].astype(str)
+
+    # 获取科目余额方向
+    account_direction = accounts_str.set_index("account_code")["balance_direction"].to_dict()
+
+    # 计算期末余额（简化版：期初余额暂设为0，后续可扩展）
+    summary["begin_balance"] = 0.0
+    summary["end_balance"] = summary.apply(
+        lambda row: _calculateEndBalance(
+            row["begin_balance"],
+            row["debit_total"],
+            row["credit_total"],
+            account_direction.get(row["account_code"], "借")
+        ),
+        axis=1
+    )
+
+    return summary[["account_code", "account_name", "period",
+                     "begin_balance", "debit_total", "credit_total", "end_balance"]]
+
+
+def generateReport(
+    trial_balance: pd.DataFrame,
+    accounts: pd.DataFrame
+) -> pd.DataFrame:
+    """
+    根据科目余额表生成会计报表
+    """
+    if trial_balance.empty:
+        return pd.DataFrame(columns=["item", "period", "amount", "report_type"])
+
+    reports = []
+
+    # 确保科目编码为字符串类型，避免合并时类型不匹配
+    tb_temp = trial_balance.copy()
+    tb_temp["account_code"] = tb_temp["account_code"].astype(str)
+    accounts_temp = accounts.copy()
+    accounts_temp["account_code"] = accounts_temp["account_code"].astype(str)
+
+    # 合并科目类型信息
+    tb = tb_temp.merge(
+        accounts_temp[["account_code", "account_type"]],
+        on="account_code",
+        how="left"
+    )
+
+    periods = tb["period"].unique()
+
+    for period in periods:
+        period_data = tb[tb["period"] == period]
+
+        # 资产负债表
+        asset_total = period_data[period_data["account_type"] == "资产"]["end_balance"].sum()
+        liability_total = period_data[period_data["account_type"] == "负债"]["end_balance"].sum()
+        
+        # 所有者权益只包括所有者权益类科目（不包括收入、费用）
+        # 收入和费用科目应该通过结账分录转入所有者权益科目
+        equity_total = period_data[period_data["account_type"] == "所有者权益"]["end_balance"].sum()
+
+        reports.append({"item": "资产总计", "period": period, "amount": asset_total, "report_type": "资产负债表"})
+        reports.append({"item": "负债总计", "period": period, "amount": liability_total, "report_type": "资产负债表"})
+        reports.append({"item": "所有者权益总计", "period": period, "amount": equity_total, "report_type": "资产负债表"})
+
+        # 利润表
+        revenue_total = period_data[period_data["account_type"] == "收入"]["credit_total"].sum()
+        expense_total = period_data[period_data["account_type"] == "费用"]["debit_total"].sum()
+        net_income = revenue_total - expense_total
+
+        reports.append({"item": "收入合计", "period": period, "amount": revenue_total, "report_type": "利润表"})
+        reports.append({"item": "费用合计", "period": period, "amount": expense_total, "report_type": "利润表"})
+        reports.append({"item": "净利润", "period": period, "amount": net_income, "report_type": "利润表"})
+
+    return pd.DataFrame(reports)
+
+
+def validateReport(report: pd.DataFrame) -> Tuple[bool, List[str]]:
+    """
+    校验会计报表是否平衡
+    资产 = 负债 + 所有者权益
+    """
+    errors = []
+
+    if report.empty:
+        return True, []
+
+    bs = report[report["report_type"] == "资产负债表"]
+    periods = bs["period"].unique()
+
+    for period in periods:
+        period_data = bs[bs["period"] == period]
+        asset = period_data[period_data["item"] == "资产总计"]["amount"].sum()
+        liability = period_data[period_data["item"] == "负债总计"]["amount"].sum()
+        equity = period_data[period_data["item"] == "所有者权益总计"]["amount"].sum()
+
+        if abs(asset - liability - equity) > 0.01:
+            errors.append(
+                f"期间 {period}: 资产({asset:.2f}) ≠ 负债({liability:.2f}) + 所有者权益({equity:.2f})"
+            )
+
+    is_balanced = len(errors) == 0
+    return is_balanced, errors
+
+
+def _calculateEndBalance(
+    begin_balance: float,
+    debit_total: float,
+    credit_total: float,
+    balance_direction: str
+) -> float:
+    """计算期末余额"""
+    if balance_direction == "借":
+        return begin_balance + debit_total - credit_total
+    else:
+        return begin_balance - debit_total + credit_total
