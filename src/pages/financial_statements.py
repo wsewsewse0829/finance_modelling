@@ -209,6 +209,10 @@ def _renderIncomeStatement(trial_balance: pd.DataFrame, periods: list) -> None:
         account_names_ordered = type_data_sorted["account_name"].unique()
         pivot = pivot.reindex(account_names_ordered)
         
+        # 添加合计列
+        if len(periods) > 1:
+            pivot["合计"] = pivot.sum(axis=1)
+        
         # 显示表格
         st.dataframe(pivot.style.format("{:.2f}"), use_container_width=True)
     
@@ -247,6 +251,10 @@ def _renderIncomeStatement(trial_balance: pd.DataFrame, periods: list) -> None:
         values="金额",
         aggfunc="sum"
     ).reindex(["收入合计", "费用合计", "净利润"])
+    
+    # 添加合计列
+    if len(periods) > 1:
+        pivot["合计"] = pivot.sum(axis=1)
     
     st.dataframe(pivot.style.format("{:.2f}"), use_container_width=True)
 
