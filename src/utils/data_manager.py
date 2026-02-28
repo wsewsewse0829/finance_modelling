@@ -15,6 +15,8 @@ ACCOUNTS_FILE = os.path.join(DATA_DIR, "accounts.csv")
 GENERAL_LEDGER_FILE = os.path.join(DATA_DIR, "general_ledger.csv")
 TRIAL_BALANCE_FILE = os.path.join(DATA_DIR, "trial_balance.csv")
 REPORT_FILE = os.path.join(DATA_DIR, "report.csv")
+WORKING_PAPERS_DIR = os.path.join(DATA_DIR, "working_papers")
+WORKING_PAPERS_FILE = os.path.join(DATA_DIR, "working_papers.csv")
 
 
 def ensureDataDir() -> None:
@@ -91,6 +93,60 @@ def saveReport(df: pd.DataFrame) -> None:
     """保存会计报表数据"""
     ensureDataDir()
     df.to_csv(REPORT_FILE, index=False)
+
+
+def getWorkingPapersList() -> pd.DataFrame:
+    """获取工作底稿列表"""
+    ensureDataDir()
+    os.makedirs(WORKING_PAPERS_DIR, exist_ok=True)
+    
+    if os.path.exists(WORKING_PAPERS_FILE):
+        return pd.read_csv(WORKING_PAPERS_FILE)
+    return pd.DataFrame(columns=["filename", "upload_date", "file_size"])
+
+
+def saveWorkingPaper(filename: str, upload_date: str, file_size: int) -> None:
+    """保存工作底稿元数据"""
+    ensureDataDir()
+    os.makedirs(WORKING_PAPERS_DIR, exist_ok=True)
+    
+    # 读取现有记录
+    existing = getWorkingPapersList()
+    
+    # 添加新记录
+    new_record = pd.DataFrame([{
+        "filename": filename,
+        "upload_date": upload_date,
+        "file_size": file_size
+    }])
+    
+    updated = pd.concat([existing, new_record], ignore_index=True)
+    updated.to_csv(WORKING_PAPERS_FILE, index=False)
+
+
+def deleteWorkingPaper(filename: str) -> bool:
+    """删除工作底稿"""
+    ensureDataDir()
+    file_path = os.path.join(WORKING_PAPERS_DIR, filename)
+    
+    # 删除文件
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        
+        # 更新元数据
+        existing = getWorkingPapersList()
+        updated = existing[existing["filename"] != filename]
+        updated.to_csv(WORKING_PAPERS_FILE, index=False)
+        
+        return True
+    return False
+
+
+def getWorkingPaperPath(filename: str) -> str:
+    """获取工作底稿文件路径"""
+    ensureDataDir()
+    os.makedirs(WORKING_PAPERS_DIR, exist_ok=True)
+    return os.path.join(WORKING_PAPERS_DIR, filename)
 
 
 def _createDefaultAccounts() -> pd.DataFrame:

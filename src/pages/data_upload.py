@@ -6,10 +6,13 @@
 import streamlit as st
 import pandas as pd
 from io import StringIO
+import os
+from datetime import datetime
 
 from src.utils.data_manager import (
     loadGeneralLedger, saveGeneralLedger,
     loadAccounts, saveTrialBalance, saveReport,
+    getWorkingPapersList, saveWorkingPaper, deleteWorkingPaper, getWorkingPaperPath,
 )
 from src.utils.accounting import (
     validateJournalEntries, generateTrialBalance, generateReport,
@@ -29,7 +32,7 @@ def renderDataUploadPage() -> None:
     st.markdown("---")
 
     # 标签页
-    tab_upload, tab_view, tab_template = st.tabs(["上传数据", "查看序时账", "下载模板"])
+    tab_upload, tab_view, tab_template, tab_working_papers = st.tabs(["上传数据", "查看序时账", "下载模板", "工作底稿"])
 
     with tab_upload:
         _renderUploadSection()
@@ -39,6 +42,9 @@ def renderDataUploadPage() -> None:
 
     with tab_template:
         _renderTemplateDownload()
+
+    with tab_working_papers:
+        _renderWorkingPapers()
 
 
 def _renderUploadSection() -> None:
@@ -271,4 +277,110 @@ def _renderTemplateDownload() -> None:
     | debit_amount | 借方金额 | ✅ |
     | credit_amount | 贷方金额 | ✅ |
     | summary | 摘要 | ❌ |
+    """)
+
+
+def _renderWorkingPapers() -> None:
+    """渲染工作底稿管理"""
+    st.subheader("工作底稿管理")
+    st.markdown("上传、下载和删除线下制作的工作底稿文件。")
+
+    # 获取工作底稿列表
+    working_papers = getWorkingPapersList()
+
+    st.markdown("---")
+
+    # 上传区域
+    st.markdown("#### 📤 上传工作底稿")
+    uploaded_file = st.file_uploader(
+        "选择工作底稿文件",
+        type=["csv", "xlsx", "xls"],
+        help="支持 CSV 和 Excel 格式",
+        key="working_papers_upload"
+    )
+
+    if uploaded_file is not None:
+        try:
+            # 生成唯一文件名
+            file_ext = os.path.splitext(uploaded_file.name)[1]
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            unique_filename = f"working_paper_{timestamp}{file_ext}"
+            
+            # 保存文件
+            file_path = getWorkingPaperPath(unique_filename)
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            
+            # 保存元数据
+            file_size = len(uploaded_file.getbuffer())
+            upload_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            saveWorkingPaper(unique_filename, upload_date, file_size)
+            
+            st.success(f"✅ 工作底稿上传成功！")
+            st.rerun()
+            
+        except Exception as e:
+            st.error(f"上传失败: {str(e)}")
+
+    st.markdown("---")
+
+    # 显示工作底稿列表
+    st.markdown("#### 📋 工作底稿列表")
+
+    if working_papers.empty:
+        st.info("暂无工作底稿。请上传文件。")
+        return
+
+    # 显示统计信息
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("文件数量", len(working_papers))
+    with col2:
+        total_size = working_papers["file_size"].sum()
+        st.metric("总大小", f"{total_size / 1024:.2f} KB")
+
+    st.markdown("---")
+
+    # 显示文件列表
+    for idx, row in working_papers.iterrows():
+        with st.container():
+            col1, col2, col3 = st.columns([3, 2, 2])
+            
+            with col1:
+                st.markdown(f"**{row['filename']}**")
+                st.caption(f"上传时间: {row['upload_date']}")
+            
+            with col2:
+                # 下载按钮
+                file_path = getWorkingPaperPath(row['filename'])
+                if os.path.exists(file_path):
+                    with open(file_path, 'rb') as f:
+                        file_data = f.read()
+                    
+                    st.download_button(
+                        label="📥 下载",
+                        data=file_data,
+                        file_name=row['filename'],
+                        key=f"download_{idx}",
+                        use_container_width=True
+                    )
+                else:
+                    st.warning("文件不存在")
+            
+            with col3:
+                # 删除按钮
+                if st.button("🗑️ 删除", key=f"delete_{idx}"):
+                    if deleteWorkingPaper(row['filename']):
+                        st.success("删除成功！")
+                        st.rerun()
+                    else:
+                        st.error("删除失败！")
+            
+            st.markdown("---")
+
+    st.markdown("""
+    💡 **提示**：
+    - 工作底稿用于存储线下制作的辅助计算文件
+    - 下载格式与上传格式保持一致
+    - 删除工作底稿不会影响序时账和会计报表数据
     """)
