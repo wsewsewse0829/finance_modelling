@@ -49,7 +49,10 @@ def generateTrialBalance(
 
     # 添加期间列
     gl = general_ledger.copy()
-    gl["period"] = pd.to_datetime(gl["entry_date"]).dt.strftime("%Y-%m")
+    # 转换日期为datetime并提取期间（使用errors="coerce"处理无效日期）
+    gl["period"] = pd.to_datetime(gl["entry_date"], errors="coerce").dt.strftime("%Y-%m")
+    # 过滤掉日期转换失败的记录
+    gl = gl[gl["period"].notna() & (gl["period"] != "")]
 
     # 确保科目编码为字符串类型
     gl["account_code"] = gl["account_code"].astype(str)
