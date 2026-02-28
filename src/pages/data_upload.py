@@ -83,6 +83,10 @@ def _renderUploadSection() -> None:
             df["debit_amount"] = pd.to_numeric(df["debit_amount"], errors="coerce").fillna(0)
             df["credit_amount"] = pd.to_numeric(df["credit_amount"], errors="coerce").fillna(0)
             df["account_code"] = df["account_code"].astype(str)
+            # 统一日期格式为 YYYY-MM-DD 字符串
+            df["entry_date"] = pd.to_datetime(df["entry_date"], errors="coerce").dt.strftime("%Y-%m-%d")
+            # 过滤掉日期转换失败的记录
+            df = df[df["entry_date"].notna()]
 
             # 添加缺失列
             if "id" not in df.columns:
