@@ -66,13 +66,18 @@ def generateTrialBalance(
     account_info = accounts_str.set_index("account_code")[["account_name", "balance_direction"]].to_dict("index")
 
     # 获取所有期间并按时间排序
-    periods = sorted(summary["period"].unique())
+    # 必须从原始序时账中提取所有期间，而不是从汇总数据中
+    periods = sorted(gl["period"].unique())
     
     # 获取所有科目（包括科目表中定义的所有科目）
     all_accounts = accounts_str[["account_code", "account_name"]].to_dict("records")
     
     # 记录每个科目的上期期末余额
     account_end_balance = {}
+    
+    # 初始化所有科目的上期期末余额为0
+    for account in all_accounts:
+        account_end_balance[account["account_code"]] = 0.0
     
     # 对每个科目按时间顺序计算期初和期末余额
     result_rows = []
