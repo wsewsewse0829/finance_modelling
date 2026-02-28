@@ -43,14 +43,12 @@ def loadGeneralLedger() -> pd.DataFrame:
     ensureDataDir()
     if os.path.exists(GENERAL_LEDGER_FILE):
         df = pd.read_csv(GENERAL_LEDGER_FILE)
-        # 转换日期格式（处理已经是datetime的情况）
-        if df["entry_date"].dtype == "object":
-            df["entry_date"] = pd.to_datetime(df["entry_date"], errors="coerce").dt.date
-        else:
-            # 如果已经是datetime类型，只取日期部分
-            df["entry_date"] = pd.to_datetime(df["entry_date"]).dt.date
+        # 转换日期为统一的字符串格式 YYYY-MM-DD，避免时区问题
+        df["entry_date"] = pd.to_datetime(df["entry_date"], errors="coerce").dt.strftime("%Y-%m-%d")
         df["debit_amount"] = pd.to_numeric(df["debit_amount"], errors="coerce").fillna(0)
         df["credit_amount"] = pd.to_numeric(df["credit_amount"], errors="coerce").fillna(0)
+        # 过滤掉日期转换失败的记录
+        df = df[df["entry_date"].notna()]
         return df
     return pd.DataFrame(columns=[
         "id", "entry_date", "voucher_no", "account_code",

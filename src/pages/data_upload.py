@@ -203,30 +203,26 @@ def _renderLedgerView() -> None:
         st.markdown("#### 按会计期间删除")
         
         try:
-            # 提取会计期间（处理可能的日期转换错误）
+            # 提取会计期间
+            # 现在日期列已经是字符串格式 (YYYY-MM-DD)
             ledger_copy = ledger.copy()
-            # 确保日期列是 datetime 类型
-            if ledger_copy["entry_date"].dtype != "datetime64[ns]":
-                ledger_copy["entry_date"] = pd.to_datetime(ledger_copy["entry_date"], errors="coerce")
-            # 过滤掉无效日期
-            ledger_copy = ledger_copy[ledger_copy["entry_date"].notna()]
+            
+            # 从日期字符串中提取期间 (YYYY-MM)
+            ledger_copy["period"] = ledger_copy["entry_date"].str.slice(0, 7)
+            
+            # 过滤掉无效期间
+            ledger_copy = ledger_copy[ledger_copy["period"].notna() & (ledger_copy["period"] != "")]
             
             if not ledger_copy.empty:
-                ledger_copy["period"] = ledger_copy["entry_date"].dt.strftime("%Y-%m")
                 periods = sorted(ledger_copy["period"].unique())
                 
                 if periods:
                     selected_period = st.selectbox("选择要删除的会计期间", periods, key="delete_period")
                     if st.button("🗑️ 删除选中期间数据", type="secondary", key="delete_period_btn"):
                         # 删除选定期间的数据
-                        # 同样需要处理原始 ledger 的日期列
+                        # 同样使用字符串提取期间
                         ledger_for_filter = ledger.copy()
-                        if ledger_for_filter["entry_date"].dtype != "datetime64[ns]":
-                            ledger_for_filter["entry_date"] = pd.to_datetime(ledger_for_filter["entry_date"], errors="coerce")
-                        
-                        # 过滤掉无效日期后再计算期间
-                        ledger_for_filter = ledger_for_filter[ledger_for_filter["entry_date"].notna()]
-                        ledger_for_filter["period"] = ledger_for_filter["entry_date"].dt.strftime("%Y-%m")
+                        ledger_for_filter["period"] = ledger_for_filter["entry_date"].str.slice(0, 7)
                         
                         filtered_ledger = ledger_for_filter[ledger_for_filter["period"] != selected_period].copy()
                         # 移除临时列
