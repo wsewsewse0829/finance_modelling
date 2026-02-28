@@ -525,14 +525,31 @@ def _renderAccountTrend(trial_balance: pd.DataFrame, periods: list) -> None:
     # 过滤数据
     trend_data = filtered_data[filtered_data["account_code"].isin(selected_codes)].sort_values(["account_code", "period"])
     
+    # 根据科目类型确定显示的数值和标题
+    if account_type in ["收入", "费用"]:
+        if account_type == "收入":
+            # 收入类科目使用贷方发生额
+            y_column = "credit_total"
+            y_label = "贷方发生额"
+        else:
+            # 费用类科目使用借方发生额
+            y_column = "debit_total"
+            y_label = "借方发生额"
+        chart_title = f"科目{y_label}趋势"
+    else:
+        # 资产、负债、所有者权益使用期末余额
+        y_column = "end_balance"
+        y_label = "期末余额"
+        chart_title = "科目期末余额趋势"
+    
     # 趋势图
     fig = px.line(
         trend_data,
         x="period",
-        y="end_balance",
+        y=y_column,
         color="account_name",
-        title="科目期末余额趋势",
-        labels={"period": "会计期间", "end_balance": "期末余额", "account_name": "科目名称"},
+        title=chart_title,
+        labels={"period": "会计期间", y_column: y_label, "account_name": "科目名称"},
         markers=True,
     )
     st.plotly_chart(fig, use_container_width=True)
