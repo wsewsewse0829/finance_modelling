@@ -310,28 +310,34 @@ def _renderWorkingPapers() -> None:
         key="working_papers_upload"
     )
 
+    # 显示文件信息
     if uploaded_file is not None:
-        try:
-            # 生成唯一文件名
-            file_ext = os.path.splitext(uploaded_file.name)[1]
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            unique_filename = f"working_paper_{timestamp}{file_ext}"
-            
-            # 保存文件
-            file_path = getWorkingPaperPath(unique_filename)
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            
-            # 保存元数据
-            file_size = len(uploaded_file.getbuffer())
-            upload_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            saveWorkingPaper(unique_filename, upload_date, file_size)
-            
-            st.success(f"✅ 工作底稿上传成功！")
-            st.rerun()
-            
-        except Exception as e:
-            st.error(f"上传失败: {str(e)}")
+        st.info(f"已选择文件: {uploaded_file.name} ({len(uploaded_file.getbuffer()) / 1024:.2f} KB)")
+        
+        # 确认上传按钮
+        if st.button("📥 确认上传", type="primary", key="upload_working_paper"):
+            try:
+                # 生成唯一文件名
+                file_ext = os.path.splitext(uploaded_file.name)[1]
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                unique_filename = f"working_paper_{timestamp}{file_ext}"
+                
+                # 保存文件
+                file_path = getWorkingPaperPath(unique_filename)
+                with open(file_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                
+                # 保存元数据
+                file_size = len(uploaded_file.getbuffer())
+                upload_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                saveWorkingPaper(unique_filename, upload_date, file_size)
+                
+                st.success(f"✅ 工作底稿上传成功！")
+                st.balloons()
+                st.rerun()
+                
+            except Exception as e:
+                st.error(f"上传失败: {str(e)}")
 
     st.markdown("---")
 
