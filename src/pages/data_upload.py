@@ -201,41 +201,52 @@ def _renderLedgerView() -> None:
     with col2:
         # 按会计期间删除
         st.markdown("#### 按会计期间删除")
-        # 提取会计期间
-        ledger["period"] = pd.to_datetime(ledger["entry_date"]).dt.strftime("%Y-%m")
-        periods = sorted(ledger["period"].unique())
         
-        if periods:
-            selected_period = st.selectbox("选择要删除的会计期间", periods, key="delete_period")
-            if st.button("🗑️ 删除选中期间数据", type="secondary", key="delete_period_btn"):
-                # 删除选定期间的数据
-                filtered_ledger = ledger[ledger["period"] != selected_period].copy()
-                # 移除临时列
-                if "period" in filtered_ledger.columns:
-                    filtered_ledger = filtered_ledger.drop(columns=["period"])
+        try:
+            # 提取会计期间（处理可能的日期转换错误）
+            ledger_copy = ledger.copy()
+            ledger_copy["entry_date"] = pd.to_datetime(ledger_copy["entry_date"], errors="coerce")
+            # 过滤掉无效日期
+            ledger_copy = ledger_copy[ledger_copy["entry_date"].notna()]
+            
+            if not ledger_copy.empty:
+                ledger_copy["period"] = ledger_copy["entry_date"].dt.strftime("%Y-%m")
+                periods = sorted(ledger_copy["period"].unique())
                 
-                # 保存过滤后的序时账
-                saveGeneralLedger(filtered_ledger)
-                
-                # 重新生成科目余额表和会计报表
-                accounts = loadAccounts()
-                if not filtered_ledger.empty:
-                    trial_balance = generateTrialBalance(filtered_ledger, accounts)
-                    saveTrialBalance(trial_balance)
-                    report = generateReport(trial_balance, accounts)
-                    saveReport(report)
+                if periods:
+                    selected_period = st.selectbox("选择要删除的会计期间", periods, key="delete_period")
+                    if st.button("🗑️ 删除选中期间数据", type="secondary", key="delete_period_btn"):
+                        # 删除选定期间的数据
+                        filtered_ledger = ledger[ledger["entry_date"].apply(
+                            lambda x: pd.to_datetime(x, errors="coerce").strftime("%Y-%m") if pd.notna(pd.to_datetime(x, errors="coerce")) else ""
+                        ) != selected_period].copy()
+                        
+                        # 保存过滤后的序时账
+                        saveGeneralLedger(filtered_ledger)
+                        
+                        # 重新生成科目余额表和会计报表
+                        accounts = loadAccounts()
+                        if not filtered_ledger.empty:
+                            trial_balance = generateTrialBalance(filtered_ledger, accounts)
+                            saveTrialBalance(trial_balance)
+                            report = generateReport(trial_balance, accounts)
+                            saveReport(report)
+                        else:
+                            # 如果没有数据，清空报表
+                            saveTrialBalance(pd.DataFrame(columns=[
+                                "account_code", "account_name", "period",
+                                "begin_balance", "debit_total", "credit_total", "end_balance"
+                            ]))
+                            saveReport(pd.DataFrame(columns=["item", "period", "amount", "report_type"]))
+                        
+                        st.success(f"已删除 {selected_period} 期间的数据。")
+                        st.rerun()
                 else:
-                    # 如果没有数据，清空报表
-                    saveTrialBalance(pd.DataFrame(columns=[
-                        "account_code", "account_name", "period",
-                        "begin_balance", "debit_total", "credit_total", "end_balance"
-                    ]))
-                    saveReport(pd.DataFrame(columns=["item", "period", "amount", "report_type"]))
-                
-                st.success(f"已删除 {selected_period} 期间的数据。")
-                st.rerun()
-        else:
-            st.info("暂无会计期间数据。")
+                    st.info("暂无有效的会计期间数据。")
+            else:
+                st.info("暂无有效的日期数据。")
+        except Exception as e:
+            st.error(f"加载期间数据失败: {str(e)}")
 
 
 def _renderTemplateDownload() -> None:
