@@ -205,7 +205,9 @@ def _renderLedgerView() -> None:
         try:
             # 提取会计期间（处理可能的日期转换错误）
             ledger_copy = ledger.copy()
-            ledger_copy["entry_date"] = pd.to_datetime(ledger_copy["entry_date"], errors="coerce")
+            # 确保日期列是 datetime 类型
+            if ledger_copy["entry_date"].dtype != "datetime64[ns]":
+                ledger_copy["entry_date"] = pd.to_datetime(ledger_copy["entry_date"], errors="coerce")
             # 过滤掉无效日期
             ledger_copy = ledger_copy[ledger_copy["entry_date"].notna()]
             
@@ -217,9 +219,18 @@ def _renderLedgerView() -> None:
                     selected_period = st.selectbox("选择要删除的会计期间", periods, key="delete_period")
                     if st.button("🗑️ 删除选中期间数据", type="secondary", key="delete_period_btn"):
                         # 删除选定期间的数据
-                        filtered_ledger = ledger[ledger["entry_date"].apply(
-                            lambda x: pd.to_datetime(x, errors="coerce").strftime("%Y-%m") if pd.notna(pd.to_datetime(x, errors="coerce")) else ""
-                        ) != selected_period].copy()
+                        # 同样需要处理原始 ledger 的日期列
+                        ledger_for_filter = ledger.copy()
+                        if ledger_for_filter["entry_date"].dtype != "datetime64[ns]":
+                            ledger_for_filter["entry_date"] = pd.to_datetime(ledger_for_filter["entry_date"], errors="coerce")
+                        
+                        # 过滤掉无效日期后再计算期间
+                        ledger_for_filter = ledger_for_filter[ledger_for_filter["entry_date"].notna()]
+                        ledger_for_filter["period"] = ledger_for_filter["entry_date"].dt.strftime("%Y-%m")
+                        
+                        filtered_ledger = ledger_for_filter[ledger_for_filter["period"] != selected_period].copy()
+                        # 移除临时列
+                        filtered_ledger = filtered_ledger.drop(columns=["period"])
                         
                         # 保存过滤后的序时账
                         saveGeneralLedger(filtered_ledger)
