@@ -39,6 +39,7 @@ def generateTrialBalance(
     """
     根据序时账生成科目余额表
     实现连续编报：本期期初余额 = 上期期末余额
+    对于没有业务的科目，余额也会延续到后续期间
     """
     if general_ledger.empty:
         return pd.DataFrame(columns=[
@@ -50,36 +51,49 @@ def generateTrialBalance(
     gl = general_ledger.copy()
     gl["period"] = pd.to_datetime(gl["entry_date"]).dt.strftime("%Y-%m")
 
-    # 按科目和期间汇总
-    summary = gl.groupby(["account_code", "account_name", "period"]).agg(
+    # 确保科目编码为字符串类型
+    gl["account_code"] = gl["account_code"].astype(str)
+    accounts_str = accounts.copy()
+    accounts_str["account_code"] = accounts_str["account_code"].astype(str)
+
+    # 按科目和期间汇总业务发生额
+    summary = gl.groupby(["account_code", "period"]).agg(
         debit_total=("debit_amount", "sum"),
         credit_total=("credit_amount", "sum"),
     ).reset_index()
 
-    # 确保科目编码为字符串类型以保持一致性
-    summary["account_code"] = summary["account_code"].astype(str)
-    accounts_str = accounts.copy()
-    accounts_str["account_code"] = accounts_str["account_code"].astype(str)
-
-    # 获取科目余额方向
-    account_direction = accounts_str.set_index("account_code")["balance_direction"].to_dict()
+    # 获取科目余额方向和名称
+    account_info = accounts_str.set_index("account_code")[["account_name", "balance_direction"]].to_dict("index")
 
     # 获取所有期间并按时间排序
     periods = sorted(summary["period"].unique())
     
+    # 获取所有科目（包括科目表中定义的所有科目）
+    all_accounts = accounts_str[["account_code", "account_name"]].to_dict("records")
+    
+    # 记录每个科目的上期期末余额
+    account_end_balance = {}
+    
     # 对每个科目按时间顺序计算期初和期末余额
     result_rows = []
-    account_end_balance = {}  # 记录每个科目的上期期末余额
     
     for period in periods:
-        period_data = summary[summary["period"] == period]
+        # 获取当前期间的业务数据
+        period_summary = summary[summary["period"] == period].set_index("account_code")
         
-        for _, row in period_data.iterrows():
-            account_code = row["account_code"]
-            account_name = row["account_name"]
-            debit_total = row["debit_total"]
-            credit_total = row["credit_total"]
-            balance_direction = account_direction.get(account_code, "借")
+        # 处理每个科目
+        for account in all_accounts:
+            account_code = account["account_code"]
+            account_name = account["account_name"]
+            balance_direction = account_info.get(account_code, {}).get("balance_direction", "借")
+            
+            # 获取本期发生额（如果没有业务，则为0）
+            if account_code in period_summary.index:
+                debit_total = period_summary.loc[account_code, "debit_total"]
+                credit_total = period_summary.loc[account_code, "credit_total"]
+            else:
+                debit_total = 0.0
+                credit_total = 0.0
             
             # 期初余额 = 上期期末余额（如果没有上期，则为0）
             begin_balance = account_end_balance.get(account_code, 0.0)
@@ -95,15 +109,17 @@ def generateTrialBalance(
             # 保存期末余额供下期使用
             account_end_balance[account_code] = end_balance
             
-            result_rows.append({
-                "account_code": account_code,
-                "account_name": account_name,
-                "period": period,
-                "begin_balance": begin_balance,
-                "debit_total": debit_total,
-                "credit_total": credit_total,
-                "end_balance": end_balance
-            })
+            # 只有当科目有余额或有业务时才添加到结果中
+            if abs(begin_balance) > 0.01 or abs(debit_total) > 0.01 or abs(credit_total) > 0.01 or abs(end_balance) > 0.01:
+                result_rows.append({
+                    "account_code": account_code,
+                    "account_name": account_name,
+                    "period": period,
+                    "begin_balance": begin_balance,
+                    "debit_total": debit_total,
+                    "credit_total": credit_total,
+                    "end_balance": end_balance
+                })
     
     result_df = pd.DataFrame(result_rows)
     
