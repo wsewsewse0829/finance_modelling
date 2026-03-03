@@ -272,6 +272,68 @@ def getWorkingPaperPath(filename: str) -> str:
     return os.path.join(WORKING_PAPERS_DIR, filename)
 
 
+def saveTrialBalance(df: pd.DataFrame) -> None:
+    """保存当前用户的科目余额表数据
+    
+    Args:
+        df: 科目余额表数据
+        
+    Raises:
+        Exception: 用户未登录或数据库操作失败
+    """
+    try:
+        user_id = _get_user_id()
+        
+        # 删除用户的所有旧科目余额表数据
+        supabase.table('trial_balance').delete().eq('user_id', user_id).execute()
+        
+        # 准备新数据
+        data = df.to_dict('records')
+        for record in data:
+            record['user_id'] = user_id
+        
+        # 批量插入新数据
+        if data:
+            batch_size = 1000
+            for i in range(0, len(data), batch_size):
+                batch = data[i:i + batch_size]
+                supabase.table('trial_balance').insert(batch).execute()
+            
+    except Exception as e:
+        raise Exception(f"保存科目余额表失败: {str(e)}")
+
+
+def saveReport(df: pd.DataFrame) -> None:
+    """保存当前用户的会计报表数据
+    
+    Args:
+        df: 会计报表数据
+        
+    Raises:
+        Exception: 用户未登录或数据库操作失败
+    """
+    try:
+        user_id = _get_user_id()
+        
+        # 删除用户的所有旧会计报表数据
+        supabase.table('reports').delete().eq('user_id', user_id).execute()
+        
+        # 准备新数据
+        data = df.to_dict('records')
+        for record in data:
+            record['user_id'] = user_id
+        
+        # 批量插入新数据
+        if data:
+            batch_size = 1000
+            for i in range(0, len(data), batch_size):
+                batch = data[i:i + batch_size]
+                supabase.table('reports').insert(batch).execute()
+            
+    except Exception as e:
+        raise Exception(f"保存会计报表失败: {str(e)}")
+
+
 def _createDefaultAccounts() -> pd.DataFrame:
     """创建默认科目表"""
     default_accounts = [
