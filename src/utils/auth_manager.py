@@ -38,7 +38,16 @@ def _init_supabase_client():
     if supabase is None:
         url, key = _get_supabase_credentials()
         if url and key:
-            supabase = create_client(url, key)
+            try:
+                supabase = create_client(url, key)
+                # 验证客户端是否正确创建
+                if supabase is not None:
+                    if not hasattr(supabase, 'auth'):
+                        st.error("❌ Supabase 客户端创建失败：缺少 auth 属性")
+                        return None
+            except Exception as e:
+                st.error(f"❌ 创建 Supabase 客户端时出错: {str(e)}")
+                return None
     return supabase
 
 
