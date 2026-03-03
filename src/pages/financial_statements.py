@@ -52,7 +52,7 @@ def renderFinancialStatementsPage() -> None:
     selected_periods = st.multiselect(
         "选择会计期间",
         periods,
-        default=periods[-3:] if len(periods) >= 3 else periods,
+        default=periods,  # 默认选择全部期间
     )
 
     if not selected_periods:

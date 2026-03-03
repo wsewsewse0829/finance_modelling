@@ -57,7 +57,7 @@ def renderBudgetAnalysisPage() -> None:
     selected_periods = st.multiselect(
         "选择会计期间",
         periods,
-        default=periods[-3:] if len(periods) >= 3 else periods,
+        default=periods,  # 默认选择全部期间
     )
 
     if not selected_periods:
@@ -188,7 +188,7 @@ def _createComparisonTable(
     budget_pivot: pd.DataFrame,
     periods: list
 ) -> pd.DataFrame:
-    """创建对比表"""
+    """创建对比表 - 显示实际|预算|预实差异三列"""
     result_rows = []
 
     # 获取所有科目名称
@@ -198,62 +198,33 @@ def _createComparisonTable(
     if not budget_pivot.empty:
         all_accounts.update(budget_pivot.index)
 
-    for period in periods:
-        for account_name in sorted(all_accounts):
-            # 获取实际值
-            if not actual_pivot.empty and account_name in actual_pivot.index:
-                actual_value = actual_pivot.loc[account_name, period] if period in actual_pivot.columns else 0
-            else:
-                actual_value = 0
+    for account_name in sorted(all_accounts):
+        # 汇总所有期间的实际值
+        if not actual_pivot.empty and account_name in actual_pivot.index:
+            actual_value = actual_pivot.loc[account_name, periods].sum() if any(p in actual_pivot.columns for p in periods) else 0
+        else:
+            actual_value = 0
 
-            # 获取预算值
-            if not budget_pivot.empty and account_name in budget_pivot.index:
-                budget_value = budget_pivot.loc[account_name, period] if period in budget_pivot.columns else 0
-            else:
-                budget_value = 0
+        # 汇总所有期间的预算值
+        if not budget_pivot.empty and account_name in budget_pivot.index:
+            budget_value = budget_pivot.loc[account_name, periods].sum() if any(p in budget_pivot.columns for p in periods) else 0
+        else:
+            budget_value = 0
 
-            # 计算差异
-            difference = actual_value - budget_value
+        # 计算差异
+        difference = actual_value - budget_value
 
-            result_rows.append({
-                "科目名称": account_name,
-                "期间": period,
-                "实际": actual_value,
-                "预算": budget_value,
-                "预实差异": difference
-            })
+        result_rows.append({
+            "科目名称": account_name,
+            "实际": actual_value,
+            "预算": budget_value,
+            "预实差异": difference
+        })
 
     df = pd.DataFrame(result_rows)
-    if not df.empty:
-        # 创建透视表
-        df_pivot = df.pivot_table(
-            index="科目名称",
-            columns="期间",
-            values=["实际", "预算", "预实差异"],
-            aggfunc="first"
-        )
-
-        # 重新索引列
-        result_df = pd.DataFrame(index=df_pivot.index)
-        for period in periods:
-            for value_type in ["实际", "预算", "预实差异"]:
-                col_name = f"{value_type}_{period}"
-                if col_name in df_pivot.columns:
-                    result_df[(period, value_type)] = df_pivot[col_name]
-                else:
-                    result_df[(period, value_type)] = 0
-
-        # 展开多级列
-        result_df.columns = [f"{col[1]}_{col[0]}" if isinstance(col, tuple) else col for col in result_df.columns]
-
-        return df.pivot_table(
-            index="科目名称",
-            columns="期间",
-            values=["实际", "预算", "预实差异"],
-            aggfunc="first"
-        ).reindex(level=1, axis=1, columns=periods).swaplevel(axis=1)
-
-    return pd.DataFrame()
+    df = df.set_index("科目名称")
+    
+    return df
 
 
 def _createBalanceSheetSummary(
@@ -261,65 +232,52 @@ def _createBalanceSheetSummary(
     budget_tb: pd.DataFrame,
     periods: list
 ) -> pd.DataFrame:
-    """创建资产负债表汇总"""
-    summary_rows = []
+    """创建资产负债表汇总 - 显示实际|预算|预实差异三列"""
+    # 汇总所有期间的实际数据
+    if not actual_tb.empty:
+        asset_actual = actual_tb[actual_tb["account_type"] == "资产"]["end_balance"].sum()
+        liability_actual = actual_tb[actual_tb["account_type"] == "负债"]["end_balance"].sum()
+        equity_actual = actual_tb[actual_tb["account_type"] == "所有者权益"]["end_balance"].sum()
+    else:
+        asset_actual = 0
+        liability_actual = 0
+        equity_actual = 0
 
-    for period in periods:
-        # 实际数据汇总
-        if not actual_tb.empty:
-            period_actual = actual_tb[actual_tb["period"] == period]
-            asset_actual = period_actual[period_actual["account_type"] == "资产"]["end_balance"].sum()
-            liability_actual = period_actual[period_actual["account_type"] == "负债"]["end_balance"].sum()
-            equity_actual = period_actual[period_actual["account_type"] == "所有者权益"]["end_balance"].sum()
-        else:
-            asset_actual = 0
-            liability_actual = 0
-            equity_actual = 0
+    # 汇总所有期间的预算数据
+    if not budget_tb.empty:
+        asset_budget = budget_tb[budget_tb["account_type"] == "资产"]["end_balance"].sum()
+        liability_budget = budget_tb[budget_tb["account_type"] == "负债"]["end_balance"].sum()
+        equity_budget = budget_tb[budget_tb["account_type"] == "所有者权益"]["end_balance"].sum()
+    else:
+        asset_budget = 0
+        liability_budget = 0
+        equity_budget = 0
 
-        # 预算数据汇总
-        if not budget_tb.empty:
-            period_budget = budget_tb[budget_tb["period"] == period]
-            asset_budget = period_budget[period_budget["account_type"] == "资产"]["end_balance"].sum()
-            liability_budget = period_budget[period_budget["account_type"] == "负债"]["end_balance"].sum()
-            equity_budget = period_budget[period_budget["account_type"] == "所有者权益"]["end_balance"].sum()
-        else:
-            asset_budget = 0
-            liability_budget = 0
-            equity_budget = 0
-
-        summary_rows.append({
+    summary_rows = [
+        {
             "科目名称": "资产总计",
-            "期间": period,
             "实际": asset_actual,
             "预算": asset_budget,
             "预实差异": asset_actual - asset_budget
-        })
-        summary_rows.append({
+        },
+        {
             "科目名称": "负债总计",
-            "期间": period,
             "实际": liability_actual,
             "预算": liability_budget,
             "预实差异": liability_actual - liability_budget
-        })
-        summary_rows.append({
+        },
+        {
             "科目名称": "所有者权益总计",
-            "期间": period,
             "实际": equity_actual,
             "预算": equity_budget,
             "预实差异": equity_actual - equity_budget
-        })
+        }
+    ]
 
     df = pd.DataFrame(summary_rows)
-    if not df.empty:
-        df_pivot = df.pivot_table(
-            index="科目名称",
-            columns="期间",
-            values=["实际", "预算", "预实差异"],
-            aggfunc="first"
-        )
-        return df_pivot.reindex(["资产总计", "负债总计", "所有者权益总计"])
-
-    return pd.DataFrame()
+    df = df.set_index("科目名称")
+    
+    return df
 
 
 def _renderIncomeStatementComparison(
@@ -422,7 +380,7 @@ def _createIncomeComparisonTable(
     budget_pivot: pd.DataFrame,
     periods: list
 ) -> pd.DataFrame:
-    """创建利润表对比表"""
+    """创建利润表对比表 - 显示实际|预算|预实差异三列"""
     result_rows = []
 
     # 获取所有科目名称
@@ -432,41 +390,33 @@ def _createIncomeComparisonTable(
     if not budget_pivot.empty:
         all_accounts.update(budget_pivot.index)
 
-    for period in periods:
-        for account_name in sorted(all_accounts):
-            # 获取实际值
-            if not actual_pivot.empty and account_name in actual_pivot.index:
-                actual_value = actual_pivot.loc[account_name, period] if period in actual_pivot.columns else 0
-            else:
-                actual_value = 0
+    for account_name in sorted(all_accounts):
+        # 汇总所有期间的实际值
+        if not actual_pivot.empty and account_name in actual_pivot.index:
+            actual_value = actual_pivot.loc[account_name, periods].sum() if any(p in actual_pivot.columns for p in periods) else 0
+        else:
+            actual_value = 0
 
-            # 获取预算值
-            if not budget_pivot.empty and account_name in budget_pivot.index:
-                budget_value = budget_pivot.loc[account_name, period] if period in budget_pivot.columns else 0
-            else:
-                budget_value = 0
+        # 汇总所有期间的预算值
+        if not budget_pivot.empty and account_name in budget_pivot.index:
+            budget_value = budget_pivot.loc[account_name, periods].sum() if any(p in budget_pivot.columns for p in periods) else 0
+        else:
+            budget_value = 0
 
-            # 计算差异
-            difference = actual_value - budget_value
+        # 计算差异
+        difference = actual_value - budget_value
 
-            result_rows.append({
-                "科目名称": account_name,
-                "期间": period,
-                "实际": actual_value,
-                "预算": budget_value,
-                "预实差异": difference
-            })
+        result_rows.append({
+            "科目名称": account_name,
+            "实际": actual_value,
+            "预算": budget_value,
+            "预实差异": difference
+        })
 
     df = pd.DataFrame(result_rows)
-    if not df.empty:
-        return df.pivot_table(
-            index="科目名称",
-            columns="期间",
-            values=["实际", "预算", "预实差异"],
-            aggfunc="first"
-        ).reindex(level=1, axis=1, columns=periods).swaplevel(axis=1)
-
-    return pd.DataFrame()
+    df = df.set_index("科目名称")
+    
+    return df
 
 
 def _createIncomeStatementSummary(
@@ -474,65 +424,52 @@ def _createIncomeStatementSummary(
     budget_tb: pd.DataFrame,
     periods: list
 ) -> pd.DataFrame:
-    """创建利润表汇总"""
-    summary_rows = []
+    """创建利润表汇总 - 显示实际|预算|预实差异三列"""
+    # 汇总所有期间的实际数据
+    if not actual_tb.empty:
+        revenue_actual = actual_tb[actual_tb["account_type"] == "收入"]["credit_total"].sum()
+        expense_actual = actual_tb[actual_tb["account_type"] == "费用"]["debit_total"].sum()
+        net_income_actual = revenue_actual - expense_actual
+    else:
+        revenue_actual = 0
+        expense_actual = 0
+        net_income_actual = 0
 
-    for period in periods:
-        # 实际数据汇总
-        if not actual_tb.empty:
-            period_actual = actual_tb[actual_tb["period"] == period]
-            revenue_actual = period_actual[period_actual["account_type"] == "收入"]["credit_total"].sum()
-            expense_actual = period_actual[period_actual["account_type"] == "费用"]["debit_total"].sum()
-            net_income_actual = revenue_actual - expense_actual
-        else:
-            revenue_actual = 0
-            expense_actual = 0
-            net_income_actual = 0
+    # 汇总所有期间的预算数据
+    if not budget_tb.empty:
+        revenue_budget = budget_tb[budget_tb["account_type"] == "收入"]["credit_total"].sum()
+        expense_budget = budget_tb[budget_tb["account_type"] == "费用"]["debit_total"].sum()
+        net_income_budget = revenue_budget - expense_budget
+    else:
+        revenue_budget = 0
+        expense_budget = 0
+        net_income_budget = 0
 
-        # 预算数据汇总
-        if not budget_tb.empty:
-            period_budget = budget_tb[budget_tb["period"] == period]
-            revenue_budget = period_budget[period_budget["account_type"] == "收入"]["credit_total"].sum()
-            expense_budget = period_budget[period_budget["account_type"] == "费用"]["debit_total"].sum()
-            net_income_budget = revenue_budget - expense_budget
-        else:
-            revenue_budget = 0
-            expense_budget = 0
-            net_income_budget = 0
-
-        summary_rows.append({
+    summary_rows = [
+        {
             "科目名称": "收入合计",
-            "期间": period,
             "实际": revenue_actual,
             "预算": revenue_budget,
             "预实差异": revenue_actual - revenue_budget
-        })
-        summary_rows.append({
+        },
+        {
             "科目名称": "费用合计",
-            "期间": period,
             "实际": expense_actual,
             "预算": expense_budget,
             "预实差异": expense_actual - expense_budget
-        })
-        summary_rows.append({
+        },
+        {
             "科目名称": "净利润",
-            "期间": period,
             "实际": net_income_actual,
             "预算": net_income_budget,
             "预实差异": net_income_actual - net_income_budget
-        })
+        }
+    ]
 
     df = pd.DataFrame(summary_rows)
-    if not df.empty:
-        df_pivot = df.pivot_table(
-            index="科目名称",
-            columns="期间",
-            values=["实际", "预算", "预实差异"],
-            aggfunc="first"
-        )
-        return df_pivot.reindex(["收入合计", "费用合计", "净利润"])
-
-    return pd.DataFrame()
+    df = df.set_index("科目名称")
+    
+    return df
 
 
 def _renderBudgetComparisonCharts(
