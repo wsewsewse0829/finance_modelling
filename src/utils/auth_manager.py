@@ -73,7 +73,7 @@ def login(email: str, password: str) -> bool:
         return False
     
     try:
-        response = supabase.auth.sign_in_with_password({
+        response = client.auth.sign_in_with_password({
             "email": email,
             "password": password
         })
@@ -116,7 +116,7 @@ def register(email: str, password: str) -> bool:
         return False
     
     try:
-        response = supabase.auth.sign_up({
+        response = client.auth.sign_up({
             "email": email,
             "password": password,
             "options": {
@@ -158,7 +158,7 @@ def logout() -> None:
         return
     
     try:
-        supabase.auth.sign_out()
+        client.auth.sign_out()
         
         # 清除 session 中的用户信息
         keys_to_clear = ['user_id', 'user_email', 'access_token']
@@ -223,8 +223,9 @@ def refresh_session() -> bool:
         bool: 刷新是否成功
     """
     try:
-        if 'access_token' in st.session_state:
-            response = supabase.auth.get_session()
+        client = _init_supabase_client()
+        if client and 'access_token' in st.session_state:
+            response = client.auth.get_session()
             if response:
                 st.session_state.access_token = response.access_token
                 return True
