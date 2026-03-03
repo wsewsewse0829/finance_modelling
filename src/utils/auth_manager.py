@@ -156,28 +156,45 @@ def register(email: str, password: str) -> bool:
         st.write("调试: 尝试注册（使用 REST API）...")
         
         # 使用 Supabase REST API 进行注册
+        # 根据 Supabase 文档，注册端点接受简单的 email 和 password
         response = _make_auth_request(
             method="POST",
             endpoint="/auth/v1/signup",
             data={
                 "email": email,
-                "password": password,
-                "options": {
-                    "email_confirm": True  # 自动确认邮箱，无需邮件验证
-                }
+                "password": password
             }
         )
         
         st.write(f"调试: 注册响应: {response}")
         
         # 检查响应
+        # 注册成功后，Supabase 可能不返回 access_token（需要邮件确认）
+        # 但我们已经禁用了邮件验证，所以应该返回 token
         if "access_token" in response and "user" in response:
+            st.success("🎉 注册成功！")
+            st.info("✅ 您的账户已创建，可以直接登录使用系统。")
+            return True
+        elif "user" in response:
             st.success("🎉 注册成功！")
             st.info("✅ 您的账户已创建，可以直接登录使用系统。")
             return True
         else:
             st.error("注册失败：响应格式错误")
             return False
+    except requests.exceptions.HTTPError as e:
+        error_msg = str(e)
+        # 尝试从响应中获取详细错误信息
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_json = e.response.json()
+                error_msg = error_json.get('message', error_msg)
+                st.error(f"注册失败: {error_msg}")
+            except:
+                st.error(f"注册失败: {error_msg}")
+        else:
+            st.error(f"注册失败: {error_msg}")
+        return False
     except Exception as e:
         error_msg = str(e)
         if "User already registered" in error_msg or "duplicate" in error_msg.lower():
