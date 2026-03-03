@@ -108,10 +108,12 @@ def login(email: str, password: str) -> bool:
         st.write("调试: 尝试登录（使用 REST API）...")
         
         # 使用 Supabase REST API 进行登录
+        # 尝试使用 /auth/v1/token 端点，在 body 中包含 grant_type
         response = _make_auth_request(
             method="POST",
-            endpoint="/auth/v1/token?grant_type=password",
+            endpoint="/auth/v1/token",
             data={
+                "grant_type": "password",
                 "email": email,
                 "password": password
             }
