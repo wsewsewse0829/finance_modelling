@@ -121,25 +121,31 @@ def _renderBalanceSheetComparison(
         st.markdown(f"#### {account_type}")
 
         # 获取实际数据和预算数据
-        if not actual_tb.empty:
+        if not actual_tb.empty and "account_type" in actual_tb.columns:
             actual_data = actual_tb[actual_tb["account_type"] == account_type].copy()
-            actual_pivot = actual_data.pivot_table(
-                index="account_name",
-                columns="period",
-                values="end_balance",
-                aggfunc="sum"
-            )
+            if not actual_data.empty:
+                actual_pivot = actual_data.pivot_table(
+                    index="account_name",
+                    columns="period",
+                    values="end_balance",
+                    aggfunc="sum"
+                )
+            else:
+                actual_pivot = pd.DataFrame()
         else:
             actual_pivot = pd.DataFrame()
 
-        if not budget_tb.empty:
+        if not budget_tb.empty and "account_type" in budget_tb.columns:
             budget_data = budget_tb[budget_tb["account_type"] == account_type].copy()
-            budget_pivot = budget_data.pivot_table(
-                index="account_name",
-                columns="period",
-                values="end_balance",
-                aggfunc="sum"
-            )
+            if not budget_data.empty:
+                budget_pivot = budget_data.pivot_table(
+                    index="account_name",
+                    columns="period",
+                    values="end_balance",
+                    aggfunc="sum"
+                )
+            else:
+                budget_pivot = pd.DataFrame()
         else:
             budget_pivot = pd.DataFrame()
 
@@ -332,25 +338,31 @@ def _renderIncomeStatementComparison(
         value_column = "credit_total" if account_type == "收入" else "debit_total"
 
         # 获取实际数据和预算数据
-        if not actual_tb.empty:
+        if not actual_tb.empty and "account_type" in actual_tb.columns:
             actual_data = actual_tb[actual_tb["account_type"] == account_type].copy()
-            actual_pivot = actual_data.pivot_table(
-                index="account_name",
-                columns="period",
-                values=value_column,
-                aggfunc="sum"
-            )
+            if not actual_data.empty:
+                actual_pivot = actual_data.pivot_table(
+                    index="account_name",
+                    columns="period",
+                    values=value_column,
+                    aggfunc="sum"
+                )
+            else:
+                actual_pivot = pd.DataFrame()
         else:
             actual_pivot = pd.DataFrame()
 
-        if not budget_tb.empty:
+        if not budget_tb.empty and "account_type" in budget_tb.columns:
             budget_data = budget_tb[budget_tb["account_type"] == account_type].copy()
-            budget_pivot = budget_data.pivot_table(
-                index="account_name",
-                columns="period",
-                values=value_column,
-                aggfunc="sum"
-            )
+            if not budget_data.empty:
+                budget_pivot = budget_data.pivot_table(
+                    index="account_name",
+                    columns="period",
+                    values=value_column,
+                    aggfunc="sum"
+                )
+            else:
+                budget_pivot = pd.DataFrame()
         else:
             budget_pivot = pd.DataFrame()
 
@@ -539,7 +551,7 @@ def _renderBalanceSheetComparisonChart(
     account_type_filter = st.selectbox("选择科目类型", ["资产", "负债", "所有者权益"])
 
     # 获取数据
-    if not actual_tb.empty:
+    if not actual_tb.empty and "period" in actual_tb.columns and "account_type" in actual_tb.columns:
         actual_data = actual_tb[
             (actual_tb["period"] == selected_period) &
             (actual_tb["account_type"] == account_type_filter)
@@ -547,7 +559,7 @@ def _renderBalanceSheetComparisonChart(
     else:
         actual_data = pd.DataFrame()
 
-    if not budget_tb.empty:
+    if not budget_tb.empty and "period" in budget_tb.columns and "account_type" in budget_tb.columns:
         budget_data = budget_tb[
             (budget_tb["period"] == selected_period) &
             (budget_tb["account_type"] == account_type_filter)
@@ -627,7 +639,7 @@ def _renderIncomeStatementComparisonChart(
     y_title = "贷方发生额" if account_type_filter == "收入" else "借方发生额"
 
     # 获取数据
-    if not actual_tb.empty:
+    if not actual_tb.empty and "period" in actual_tb.columns and "account_type" in actual_tb.columns:
         actual_data = actual_tb[
             (actual_tb["period"] == selected_period) &
             (actual_tb["account_type"] == account_type_filter)
@@ -635,7 +647,7 @@ def _renderIncomeStatementComparisonChart(
     else:
         actual_data = pd.DataFrame()
 
-    if not budget_tb.empty:
+    if not budget_tb.empty and "period" in budget_tb.columns and "account_type" in budget_tb.columns:
         budget_data = budget_tb[
             (budget_tb["period"] == selected_period) &
             (budget_tb["account_type"] == account_type_filter)
@@ -712,17 +724,31 @@ def _renderDifferenceAnalysisChart(
 
     # 过滤数据
     if account_type_filter == "全部":
-        actual_data = actual_tb[actual_tb["period"] == selected_period].copy() if not actual_tb.empty else pd.DataFrame()
-        budget_data = budget_tb[budget_tb["period"] == selected_period].copy() if not budget_tb.empty else pd.DataFrame()
+        if not actual_tb.empty and "period" in actual_tb.columns:
+            actual_data = actual_tb[actual_tb["period"] == selected_period].copy()
+        else:
+            actual_data = pd.DataFrame()
+        
+        if not budget_tb.empty and "period" in budget_tb.columns:
+            budget_data = budget_tb[budget_tb["period"] == selected_period].copy()
+        else:
+            budget_data = pd.DataFrame()
     else:
-        actual_data = actual_tb[
-            (actual_tb["period"] == selected_period) &
-            (actual_tb["account_type"] == account_type_filter)
-        ].copy() if not actual_tb.empty else pd.DataFrame()
-        budget_data = budget_tb[
-            (budget_tb["period"] == selected_period) &
-            (budget_tb["account_type"] == account_type_filter)
-        ].copy() if not budget_tb.empty else pd.DataFrame()
+        if not actual_tb.empty and "period" in actual_tb.columns and "account_type" in actual_tb.columns:
+            actual_data = actual_tb[
+                (actual_tb["period"] == selected_period) &
+                (actual_tb["account_type"] == account_type_filter)
+            ].copy()
+        else:
+            actual_data = pd.DataFrame()
+        
+        if not budget_tb.empty and "period" in budget_tb.columns and "account_type" in budget_tb.columns:
+            budget_data = budget_tb[
+                (budget_tb["period"] == selected_period) &
+                (budget_tb["account_type"] == account_type_filter)
+            ].copy()
+        else:
+            budget_data = pd.DataFrame()
 
     if actual_data.empty and budget_data.empty:
         st.info(f"该期间无{account_type_filter}数据。")
