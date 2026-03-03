@@ -566,79 +566,89 @@ def _renderBalanceSheetComparisonChart(
     """资产负债表对比图"""
     st.markdown("### 资产负债表对比")
 
-    # 合并科目类型信息
-    if not actual_tb.empty:
-        actual_tb = actual_tb.merge(
-            accounts[["account_code", "account_type", "account_name"]],
-            on="account_code",
-            how="left"
+    try:
+        # 合并科目类型信息
+        if not actual_tb.empty:
+            actual_tb = actual_tb.merge(
+                accounts[["account_code", "account_type", "account_name"]],
+                on="account_code",
+                how="left"
+            )
+        if not budget_tb.empty:
+            budget_tb = budget_tb.merge(
+                accounts[["account_code", "account_type", "account_name"]],
+                on="account_code",
+                how="left"
+            )
+
+        # 选择期间
+        selected_period = st.selectbox("选择期间", periods)
+        account_type_filter = st.selectbox("选择科目类型", ["资产", "负债", "所有者权益"])
+
+        # 获取数据
+        if not actual_tb.empty and "period" in actual_tb.columns and "account_type" in actual_tb.columns:
+            actual_data = actual_tb[
+                (actual_tb["period"] == selected_period) &
+                (actual_tb["account_type"] == account_type_filter)
+            ].copy()
+        else:
+            actual_data = pd.DataFrame()
+
+        if not budget_tb.empty and "period" in budget_tb.columns and "account_type" in budget_tb.columns:
+            budget_data = budget_tb[
+                (budget_tb["period"] == selected_period) &
+                (budget_tb["account_type"] == account_type_filter)
+            ].copy()
+        else:
+            budget_data = pd.DataFrame()
+
+        if actual_data.empty and budget_data.empty:
+            st.info(f"该期间无{account_type_filter}数据。")
+            return
+
+        # 创建对比图
+        fig = go.Figure()
+
+        # 添加实际数据柱状图
+        if not actual_data.empty and "account_name" in actual_data.columns and "end_balance" in actual_data.columns:
+            for _, row in actual_data.iterrows():
+                try:
+                    fig.add_trace(go.Bar(
+                        x=[row["account_name"]],
+                        y=[row["end_balance"]],
+                        name="实际",
+                        marker_color="#1f77b4",
+                        offsetgroup=0
+                    ))
+                except Exception as trace_error:
+                    continue
+
+        # 添加预算数据柱状图
+        if not budget_data.empty and "account_name" in budget_data.columns and "end_balance" in budget_data.columns:
+            for _, row in budget_data.iterrows():
+                try:
+                    fig.add_trace(go.Bar(
+                        x=[row["account_name"]],
+                        y=[row["end_balance"]],
+                        name="预算",
+                        marker_color="#ff7f0e",
+                        offsetgroup=1
+                    ))
+                except Exception as trace_error:
+                    continue
+
+        fig.update_layout(
+            barmode="group",
+            title=f"{account_type_filter} - 实际 vs 预算 ({selected_period})",
+            xaxis_title="科目名称",
+            yaxis_title="期末余额",
+            height=500
         )
-    if not budget_tb.empty:
-        budget_tb = budget_tb.merge(
-            accounts[["account_code", "account_type", "account_name"]],
-            on="account_code",
-            how="left"
-        )
 
-    # 选择期间
-    selected_period = st.selectbox("选择期间", periods)
-    account_type_filter = st.selectbox("选择科目类型", ["资产", "负债", "所有者权益"])
-
-    # 获取数据
-    if not actual_tb.empty and "period" in actual_tb.columns and "account_type" in actual_tb.columns:
-        actual_data = actual_tb[
-            (actual_tb["period"] == selected_period) &
-            (actual_tb["account_type"] == account_type_filter)
-        ].copy()
-    else:
-        actual_data = pd.DataFrame()
-
-    if not budget_tb.empty and "period" in budget_tb.columns and "account_type" in budget_tb.columns:
-        budget_data = budget_tb[
-            (budget_tb["period"] == selected_period) &
-            (budget_tb["account_type"] == account_type_filter)
-        ].copy()
-    else:
-        budget_data = pd.DataFrame()
-
-    if actual_data.empty and budget_data.empty:
-        st.info(f"该期间无{account_type_filter}数据。")
-        return
-
-    # 创建对比图
-    fig = go.Figure()
-
-    # 添加实际数据柱状图
-    if not actual_data.empty:
-        for _, row in actual_data.iterrows():
-            fig.add_trace(go.Bar(
-                x=[row["account_name"]],
-                y=[row["end_balance"]],
-                name="实际",
-                marker_color="#1f77b4",
-                offsetgroup=0
-            ))
-
-    # 添加预算数据柱状图
-    if not budget_data.empty:
-        for _, row in budget_data.iterrows():
-            fig.add_trace(go.Bar(
-                x=[row["account_name"]],
-                y=[row["end_balance"]],
-                name="预算",
-                marker_color="#ff7f0e",
-                offsetgroup=1
-            ))
-
-    fig.update_layout(
-        barmode="group",
-        title=f"{account_type_filter} - 实际 vs 预算 ({selected_period})",
-        xaxis_title="科目名称",
-        yaxis_title="期末余额",
-        height=500
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.error(f"生成资产负债表对比图时出错: {str(e)}")
+        st.info("请检查数据格式或联系管理员。")
 
 
 def _renderIncomeStatementComparisonChart(
@@ -650,83 +660,93 @@ def _renderIncomeStatementComparisonChart(
     """利润表对比图"""
     st.markdown("### 利润表对比")
 
-    # 合并科目类型信息
-    if not actual_tb.empty:
-        actual_tb = actual_tb.merge(
-            accounts[["account_code", "account_type", "account_name"]],
-            on="account_code",
-            how="left"
+    try:
+        # 合并科目类型信息
+        if not actual_tb.empty:
+            actual_tb = actual_tb.merge(
+                accounts[["account_code", "account_type", "account_name"]],
+                on="account_code",
+                how="left"
+            )
+        if not budget_tb.empty:
+            budget_tb = budget_tb.merge(
+                accounts[["account_code", "account_type", "account_name"]],
+                on="account_code",
+                how="left"
+            )
+
+        # 选择期间
+        selected_period = st.selectbox("选择期间", periods)
+        account_type_filter = st.selectbox("选择科目类型", ["收入", "费用"])
+
+        # 确定使用的列
+        value_column = "credit_total" if account_type_filter == "收入" else "debit_total"
+        y_title = "贷方发生额" if account_type_filter == "收入" else "借方发生额"
+
+        # 获取数据
+        if not actual_tb.empty and "period" in actual_tb.columns and "account_type" in actual_tb.columns:
+            actual_data = actual_tb[
+                (actual_tb["period"] == selected_period) &
+                (actual_tb["account_type"] == account_type_filter)
+            ].copy()
+        else:
+            actual_data = pd.DataFrame()
+
+        if not budget_tb.empty and "period" in budget_tb.columns and "account_type" in budget_tb.columns:
+            budget_data = budget_tb[
+                (budget_tb["period"] == selected_period) &
+                (budget_tb["account_type"] == account_type_filter)
+            ].copy()
+        else:
+            budget_data = pd.DataFrame()
+
+        if actual_data.empty and budget_data.empty:
+            st.info(f"该期间无{account_type_filter}数据。")
+            return
+
+        # 创建对比图
+        fig = go.Figure()
+
+        # 添加实际数据柱状图
+        if not actual_data.empty and "account_name" in actual_data.columns and value_column in actual_data.columns:
+            for _, row in actual_data.iterrows():
+                try:
+                    fig.add_trace(go.Bar(
+                        x=[row["account_name"]],
+                        y=[row[value_column]],
+                        name="实际",
+                        marker_color="#1f77b4",
+                        offsetgroup=0
+                    ))
+                except Exception as trace_error:
+                    continue
+
+        # 添加预算数据柱状图
+        if not budget_data.empty and "account_name" in budget_data.columns and value_column in budget_data.columns:
+            for _, row in budget_data.iterrows():
+                try:
+                    fig.add_trace(go.Bar(
+                        x=[row["account_name"]],
+                        y=[row[value_column]],
+                        name="预算",
+                        marker_color="#ff7f0e",
+                        offsetgroup=1
+                    ))
+                except Exception as trace_error:
+                    continue
+
+        fig.update_layout(
+            barmode="group",
+            title=f"{account_type_filter} - 实际 vs 预算 ({selected_period})",
+            xaxis_title="科目名称",
+            yaxis_title=y_title,
+            height=500
         )
-    if not budget_tb.empty:
-        budget_tb = budget_tb.merge(
-            accounts[["account_code", "account_type", "account_name"]],
-            on="account_code",
-            how="left"
-        )
 
-    # 选择期间
-    selected_period = st.selectbox("选择期间", periods)
-    account_type_filter = st.selectbox("选择科目类型", ["收入", "费用"])
-
-    # 确定使用的列
-    value_column = "credit_total" if account_type_filter == "收入" else "debit_total"
-    y_title = "贷方发生额" if account_type_filter == "收入" else "借方发生额"
-
-    # 获取数据
-    if not actual_tb.empty and "period" in actual_tb.columns and "account_type" in actual_tb.columns:
-        actual_data = actual_tb[
-            (actual_tb["period"] == selected_period) &
-            (actual_tb["account_type"] == account_type_filter)
-        ].copy()
-    else:
-        actual_data = pd.DataFrame()
-
-    if not budget_tb.empty and "period" in budget_tb.columns and "account_type" in budget_tb.columns:
-        budget_data = budget_tb[
-            (budget_tb["period"] == selected_period) &
-            (budget_tb["account_type"] == account_type_filter)
-        ].copy()
-    else:
-        budget_data = pd.DataFrame()
-
-    if actual_data.empty and budget_data.empty:
-        st.info(f"该期间无{account_type_filter}数据。")
-        return
-
-    # 创建对比图
-    fig = go.Figure()
-
-    # 添加实际数据柱状图
-    if not actual_data.empty:
-        for _, row in actual_data.iterrows():
-            fig.add_trace(go.Bar(
-                x=[row["account_name"]],
-                y=[row[value_column]],
-                name="实际",
-                marker_color="#1f77b4",
-                offsetgroup=0
-            ))
-
-    # 添加预算数据柱状图
-    if not budget_data.empty:
-        for _, row in budget_data.iterrows():
-            fig.add_trace(go.Bar(
-                x=[row["account_name"]],
-                y=[row[value_column]],
-                name="预算",
-                marker_color="#ff7f0e",
-                offsetgroup=1
-            ))
-
-    fig.update_layout(
-        barmode="group",
-        title=f"{account_type_filter} - 实际 vs 预算 ({selected_period})",
-        xaxis_title="科目名称",
-        yaxis_title=y_title,
-        height=500
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.error(f"生成利润表对比图时出错: {str(e)}")
+        st.info("请检查数据格式或联系管理员。")
 
 
 def _renderDifferenceAnalysisChart(
@@ -738,124 +758,131 @@ def _renderDifferenceAnalysisChart(
     """预实差异分析图"""
     st.markdown("### 预实差异分析")
 
-    # 合并科目类型信息
-    if not actual_tb.empty:
-        actual_tb = actual_tb.merge(
-            accounts[["account_code", "account_type", "account_name"]],
-            on="account_code",
-            how="left"
+    try:
+        # 合并科目类型信息
+        if not actual_tb.empty:
+            actual_tb = actual_tb.merge(
+                accounts[["account_code", "account_type", "account_name"]],
+                on="account_code",
+                how="left"
+            )
+        if not budget_tb.empty:
+            budget_tb = budget_tb.merge(
+                accounts[["account_code", "account_type", "account_name"]],
+                on="account_code",
+                how="left"
+            )
+
+        # 选择期间
+        selected_period = st.selectbox("选择期间", periods, key="diff_period")
+        account_type_filter = st.selectbox("选择科目类型", ["全部", "资产", "负债", "所有者权益", "收入", "费用"], key="diff_type")
+
+        # 过滤数据
+        if account_type_filter == "全部":
+            if not actual_tb.empty and "period" in actual_tb.columns:
+                actual_data = actual_tb[actual_tb["period"] == selected_period].copy()
+            else:
+                actual_data = pd.DataFrame()
+            
+            if not budget_tb.empty and "period" in budget_tb.columns:
+                budget_data = budget_tb[budget_tb["period"] == selected_period].copy()
+            else:
+                budget_data = pd.DataFrame()
+        else:
+            if not actual_tb.empty and "period" in actual_tb.columns and "account_type" in actual_tb.columns:
+                actual_data = actual_tb[
+                    (actual_tb["period"] == selected_period) &
+                    (actual_tb["account_type"] == account_type_filter)
+                ].copy()
+            else:
+                actual_data = pd.DataFrame()
+            
+            if not budget_tb.empty and "period" in budget_tb.columns and "account_type" in budget_tb.columns:
+                budget_data = budget_tb[
+                    (budget_tb["period"] == selected_period) &
+                    (budget_tb["account_type"] == account_type_filter)
+                ].copy()
+            else:
+                budget_data = pd.DataFrame()
+
+        if actual_data.empty and budget_data.empty:
+            st.info(f"该期间无{account_type_filter}数据。")
+            return
+
+        # 计算差异
+        difference_data = []
+
+        # 确定使用的值列
+        value_column = "end_balance"
+        if account_type_filter == "收入":
+            value_column = "credit_total"
+        elif account_type_filter == "费用":
+            value_column = "debit_total"
+
+        # 获取所有科目
+        all_accounts = set()
+        if not actual_data.empty and "account_name" in actual_data.columns:
+            all_accounts.update(actual_data["account_name"])
+        if not budget_data.empty and "account_name" in budget_data.columns:
+            all_accounts.update(budget_data["account_name"])
+
+        for account_name in sorted(all_accounts):
+            try:
+                actual_value = actual_data[actual_data["account_name"] == account_name][value_column].sum() if not actual_data.empty and value_column in actual_data.columns else 0
+                budget_value = budget_data[budget_data["account_name"] == account_name][value_column].sum() if not budget_data.empty and value_column in budget_data.columns else 0
+                difference = actual_value - budget_value
+
+                difference_data.append({
+                    "科目名称": account_name,
+                    "实际": actual_value,
+                    "预算": budget_value,
+                    "预实差异": difference
+                })
+            except Exception as row_error:
+                continue
+
+        diff_df = pd.DataFrame(difference_data)
+
+        if diff_df.empty:
+            st.info("无数据可显示。")
+            return
+
+        # 显示差异表
+        st.dataframe(
+            diff_df.style.format({"实际": "{:.2f}", "预算": "{:.2f}", "预实差异": "{:.2f}"}),
+            use_container_width=True,
+            hide_index=True
         )
-    if not budget_tb.empty:
-        budget_tb = budget_tb.merge(
-            accounts[["account_code", "account_type", "account_name"]],
-            on="account_code",
-            how="left"
+
+        # 差异分析图
+        fig = go.Figure()
+
+        # 正差异用绿色，负差异用红色
+        colors = ['#2ca02c' if d >= 0 else '#d62728' for d in diff_df["预实差异"]]
+
+        fig.add_trace(go.Bar(
+            x=diff_df["科目名称"],
+            y=diff_df["预实差异"],
+            marker_color=colors,
+            text=diff_df["预实差异"].apply(lambda x: f"{x:.2f}"),
+            textposition="outside"
+        ))
+
+        fig.update_layout(
+            title=f"预实差异分析 ({selected_period} - {account_type_filter})",
+            xaxis_title="科目名称",
+            yaxis_title="预实差异",
+            height=500,
+            showlegend=False
         )
 
-    # 选择期间
-    selected_period = st.selectbox("选择期间", periods, key="diff_period")
-    account_type_filter = st.selectbox("选择科目类型", ["全部", "资产", "负债", "所有者权益", "收入", "费用"], key="diff_type")
+        # 添加零线
+        fig.add_hline(y=0, line_dash="dash", line_color="gray")
 
-    # 过滤数据
-    if account_type_filter == "全部":
-        if not actual_tb.empty and "period" in actual_tb.columns:
-            actual_data = actual_tb[actual_tb["period"] == selected_period].copy()
-        else:
-            actual_data = pd.DataFrame()
-        
-        if not budget_tb.empty and "period" in budget_tb.columns:
-            budget_data = budget_tb[budget_tb["period"] == selected_period].copy()
-        else:
-            budget_data = pd.DataFrame()
-    else:
-        if not actual_tb.empty and "period" in actual_tb.columns and "account_type" in actual_tb.columns:
-            actual_data = actual_tb[
-                (actual_tb["period"] == selected_period) &
-                (actual_tb["account_type"] == account_type_filter)
-            ].copy()
-        else:
-            actual_data = pd.DataFrame()
-        
-        if not budget_tb.empty and "period" in budget_tb.columns and "account_type" in budget_tb.columns:
-            budget_data = budget_tb[
-                (budget_tb["period"] == selected_period) &
-                (budget_tb["account_type"] == account_type_filter)
-            ].copy()
-        else:
-            budget_data = pd.DataFrame()
-
-    if actual_data.empty and budget_data.empty:
-        st.info(f"该期间无{account_type_filter}数据。")
-        return
-
-    # 计算差异
-    difference_data = []
-
-    # 确定使用的值列
-    value_column = "end_balance"
-    if account_type_filter == "收入":
-        value_column = "credit_total"
-    elif account_type_filter == "费用":
-        value_column = "debit_total"
-
-    # 获取所有科目
-    all_accounts = set()
-    if not actual_data.empty:
-        all_accounts.update(actual_data["account_name"])
-    if not budget_data.empty:
-        all_accounts.update(budget_data["account_name"])
-
-    for account_name in sorted(all_accounts):
-        actual_value = actual_data[actual_data["account_name"] == account_name][value_column].sum() if not actual_data.empty else 0
-        budget_value = budget_data[budget_data["account_name"] == account_name][value_column].sum() if not budget_data.empty else 0
-        difference = actual_value - budget_value
-
-        difference_data.append({
-            "科目名称": account_name,
-            "实际": actual_value,
-            "预算": budget_value,
-            "预实差异": difference
-        })
-
-    diff_df = pd.DataFrame(difference_data)
-
-    if diff_df.empty:
-        st.info("无数据可显示。")
-        return
-
-    # 显示差异表
-    st.dataframe(
-        diff_df.style.format({"实际": "{:.2f}", "预算": "{:.2f}", "预实差异": "{:.2f}"}),
-        use_container_width=True,
-        hide_index=True
-    )
-
-    # 差异分析图
-    fig = go.Figure()
-
-    # 正差异用绿色，负差异用红色
-    colors = ['#2ca02c' if d >= 0 else '#d62728' for d in diff_df["预实差异"]]
-
-    fig.add_trace(go.Bar(
-        x=diff_df["科目名称"],
-        y=diff_df["预实差异"],
-        marker_color=colors,
-        text=diff_df["预实差异"].apply(lambda x: f"{x:.2f}"),
-        textposition="outside"
-    ))
-
-    fig.update_layout(
-        title=f"预实差异分析 ({selected_period} - {account_type_filter})",
-        xaxis_title="科目名称",
-        yaxis_title="预实差异",
-        height=500,
-        showlegend=False
-    )
-
-    # 添加零线
-    fig.add_hline(y=0, line_dash="dash", line_color="gray")
-
-    st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.error(f"生成预实差异分析图时出错: {str(e)}")
+        st.info("请检查数据格式或联系管理员。")
 
 
 def _renderBudgetAccountDetail(
