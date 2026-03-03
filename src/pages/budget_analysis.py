@@ -164,7 +164,13 @@ def _renderBalanceSheetComparison(
                     comparison_df = pd.DataFrame()
 
                 if not comparison_df.empty:
-                    st.dataframe(comparison_df.style.format({"实际": "{:.2f}", "预算": "{:.2f}", "预实差异": "{:.2f}"}), use_container_width=True)
+                    # 重命名列为中文显示
+                    comparison_display = comparison_df.rename(columns={
+                        "actual": "实际",
+                        "budget": "预算",
+                        "difference": "预实差异"
+                    })
+                    st.dataframe(comparison_display.style.format({"实际": "{:.2f}", "预算": "{:.2f}", "预实差异": "{:.2f}"}), use_container_width=True)
                 elif actual_pivot.empty and budget_pivot.empty:
                     st.info(f"暂无{account_type}数据。")
             except Exception as e:
@@ -177,7 +183,13 @@ def _renderBalanceSheetComparison(
 
         summary_comparison = _createBalanceSheetSummary(actual_tb, budget_tb, periods)
         if not summary_comparison.empty:
-            st.dataframe(summary_comparison.style.format({"实际": "{:.2f}", "预算": "{:.2f}", "预实差异": "{:.2f}"}), use_container_width=True)
+            # 重命名列为中文显示
+            summary_display = summary_comparison.rename(columns={
+                "actual": "实际",
+                "budget": "预算",
+                "difference": "预实差异"
+            })
+            st.dataframe(summary_display.style.format({"实际": "{:.2f}", "预算": "{:.2f}", "预实差异": "{:.2f}"}), use_container_width=True)
     except Exception as e:
         st.error(f"资产负债表对比功能遇到错误: {str(e)}")
         st.info("请检查数据格式或联系管理员。")
@@ -215,14 +227,17 @@ def _createComparisonTable(
         difference = actual_value - budget_value
 
         result_rows.append({
-            "科目名称": account_name,
-            "实际": actual_value,
-            "预算": budget_value,
-            "预实差异": difference
+            "account_name": account_name,
+            "actual": actual_value,
+            "budget": budget_value,
+            "difference": difference
         })
 
+    if not result_rows:
+        return pd.DataFrame()
+    
     df = pd.DataFrame(result_rows)
-    df = df.set_index("科目名称")
+    df = df.set_index("account_name")
     
     return df
 
@@ -255,27 +270,27 @@ def _createBalanceSheetSummary(
 
     summary_rows = [
         {
-            "科目名称": "资产总计",
-            "实际": asset_actual,
-            "预算": asset_budget,
-            "预实差异": asset_actual - asset_budget
+            "account_name": "资产总计",
+            "actual": asset_actual,
+            "budget": asset_budget,
+            "difference": asset_actual - asset_budget
         },
         {
-            "科目名称": "负债总计",
-            "实际": liability_actual,
-            "预算": liability_budget,
-            "预实差异": liability_actual - liability_budget
+            "account_name": "负债总计",
+            "actual": liability_actual,
+            "budget": liability_budget,
+            "difference": liability_actual - liability_budget
         },
         {
-            "科目名称": "所有者权益总计",
-            "实际": equity_actual,
-            "预算": equity_budget,
-            "预实差异": equity_actual - equity_budget
+            "account_name": "所有者权益总计",
+            "actual": equity_actual,
+            "budget": equity_budget,
+            "difference": equity_actual - equity_budget
         }
     ]
 
     df = pd.DataFrame(summary_rows)
-    df = df.set_index("科目名称")
+    df = df.set_index("account_name")
     
     return df
 
@@ -356,7 +371,13 @@ def _renderIncomeStatementComparison(
                     comparison_df = pd.DataFrame()
 
                 if not comparison_df.empty:
-                    st.dataframe(comparison_df.style.format({"实际": "{:.2f}", "预算": "{:.2f}", "预实差异": "{:.2f}"}), use_container_width=True)
+                    # 重命名列为中文显示
+                    comparison_display = comparison_df.rename(columns={
+                        "actual": "实际",
+                        "budget": "预算",
+                        "difference": "预实差异"
+                    })
+                    st.dataframe(comparison_display.style.format({"实际": "{:.2f}", "预算": "{:.2f}", "预实差异": "{:.2f}"}), use_container_width=True)
                 elif actual_pivot.empty and budget_pivot.empty:
                     st.info(f"暂无{account_type}数据。")
             except Exception as e:
@@ -369,7 +390,13 @@ def _renderIncomeStatementComparison(
 
         summary_comparison = _createIncomeStatementSummary(actual_tb, budget_tb, periods)
         if not summary_comparison.empty:
-            st.dataframe(summary_comparison.style.format({"实际": "{:.2f}", "预算": "{:.2f}", "预实差异": "{:.2f}"}), use_container_width=True)
+            # 重命名列为中文显示
+            summary_display = summary_comparison.rename(columns={
+                "actual": "实际",
+                "budget": "预算",
+                "difference": "预实差异"
+            })
+            st.dataframe(summary_display.style.format({"实际": "{:.2f}", "预算": "{:.2f}", "预实差异": "{:.2f}"}), use_container_width=True)
     except Exception as e:
         st.error(f"利润表对比功能遇到错误: {str(e)}")
         st.info("请检查数据格式或联系管理员。")
@@ -407,14 +434,17 @@ def _createIncomeComparisonTable(
         difference = actual_value - budget_value
 
         result_rows.append({
-            "科目名称": account_name,
-            "实际": actual_value,
-            "预算": budget_value,
-            "预实差异": difference
+            "account_name": account_name,
+            "actual": actual_value,
+            "budget": budget_value,
+            "difference": difference
         })
 
+    if not result_rows:
+        return pd.DataFrame()
+    
     df = pd.DataFrame(result_rows)
-    df = df.set_index("科目名称")
+    df = df.set_index("account_name")
     
     return df
 
@@ -447,27 +477,27 @@ def _createIncomeStatementSummary(
 
     summary_rows = [
         {
-            "科目名称": "收入合计",
-            "实际": revenue_actual,
-            "预算": revenue_budget,
-            "预实差异": revenue_actual - revenue_budget
+            "account_name": "收入合计",
+            "actual": revenue_actual,
+            "budget": revenue_budget,
+            "difference": revenue_actual - revenue_budget
         },
         {
-            "科目名称": "费用合计",
-            "实际": expense_actual,
-            "预算": expense_budget,
-            "预实差异": expense_actual - expense_budget
+            "account_name": "费用合计",
+            "actual": expense_actual,
+            "budget": expense_budget,
+            "difference": expense_actual - expense_budget
         },
         {
-            "科目名称": "净利润",
-            "实际": net_income_actual,
-            "预算": net_income_budget,
-            "预实差异": net_income_actual - net_income_budget
+            "account_name": "净利润",
+            "actual": net_income_actual,
+            "budget": net_income_budget,
+            "difference": net_income_actual - net_income_budget
         }
     ]
 
     df = pd.DataFrame(summary_rows)
-    df = df.set_index("科目名称")
+    df = df.set_index("account_name")
     
     return df
 
