@@ -67,16 +67,25 @@ def login(email: str, password: str) -> bool:
     Returns:
         bool: 登录是否成功
     """
+    # 调试信息
+    url, key = _get_supabase_credentials()
+    st.write(f"调试: URL 是否存在: {bool(url)}")
+    st.write(f"调试: Key 是否存在: {bool(key)}")
+    
     client = _init_supabase_client()
+    st.write(f"调试: 客户端是否初始化: {client is not None}")
+    
     if client is None:
         st.error("❌ Supabase 客户端未正确初始化，请检查配置")
         return False
     
     try:
+        st.write("调试: 尝试登录...")
         response = client.auth.sign_in_with_password({
             "email": email,
             "password": password
         })
+        st.write(f"调试: 登录响应: {response}")
         
         if response.user:
             # 保存用户信息到 session
