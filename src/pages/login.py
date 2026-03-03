@@ -3,7 +3,7 @@
 """
 
 import streamlit as st
-from src.utils.auth_manager import login, register, check_auth
+from src.utils.auth_manager import login, register, check_auth, diagnose_supabase
 
 
 def renderLoginPage():
@@ -22,6 +22,36 @@ def renderLoginPage():
     
     # 标题
     st.title("🔐 用户认证")
+    
+    # 诊断按钮
+    with st.expander("🔍 诊断 Supabase 配置"):
+        if st.button("运行诊断", key="diagnose_button"):
+            with st.spinner("正在诊断 Supabase 配置..."):
+                results = diagnose_supabase()
+                
+                st.subheader("📊 诊断结果")
+                
+                # 显示结果
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.metric("URL 已配置", "✅ 是" if results["url_configured"] else "❌ 否")
+                    st.metric("Key 已配置", "✅ 是" if results["key_configured"] else "❌ 否")
+                    st.metric("URL 可访问", "✅ 是" if results.get("url_accessible", False) else "❌ 否")
+                
+                with col2:
+                    st.metric("API Key 有效", "✅ 是" if results.get("api_key_valid", False) else "❌ 否")
+                    st.metric("认证端点可访问", "✅ 是" if results.get("auth_endpoint_accessible", False) else "❌ 否")
+                    st.metric("登录端点可访问", "✅ 是" if results.get("login_endpoint_accessible", False) else "❌ 否")
+                
+                # 显示错误
+                if results["errors"]:
+                    st.error("❌ 发现以下问题：")
+                    for error in results["errors"]:
+                        st.error(f"• {error}")
+                else:
+                    st.success("✅ 所有检查通过！Supabase 配置正常。")
+    
     st.markdown("---")
     
     # 标签页

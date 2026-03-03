@@ -318,3 +318,104 @@ def refresh_session() -> bool:
         return False
     except Exception:
         return False
+
+
+def diagnose_supabase() -> Dict[str, Any]:
+    """诊断 Supabase 配置和连接
+    
+    Returns:
+        Dict[str, Any]: 诊断结果
+    """
+    results = {
+        "url_configured": False,
+        "key_configured": False,
+        "url_accessible": False,
+        "auth_endpoint_accessible": False,
+        "signup_endpoint_accessible": False,
+        "user_exists": False,
+        "email_verification_enabled": None,
+        "errors": []
+    }
+    
+    try:
+        # 1. 检查凭证是否配置
+        url, key = _get_supabase_credentials()
+        results["url_configured"] = bool(url)
+        results["key_configured"] = bool(key)
+        
+        if not url or not key:
+            results["errors"].append("Supabase URL 或 Key 未配置")
+            return results
+        
+        # 2. 检查 URL 是否可访问
+        try:
+            response = requests.get(url, timeout=10)
+            results["url_accessible"] = response.status_code == 200
+        except Exception as e:
+            results["errors"].append(f"无法访问 Supabase URL: {str(e)}")
+        
+        # 3. 检查认证端点
+        try:
+            response = requests.get(
+                f"{url}/auth/v1/user",
+                headers={
+                    "apikey": key,
+                    "Authorization": f"Bearer {key}"
+                },
+                timeout=10
+            )
+            results["auth_endpoint_accessible"] = response.status_code in [200, 401]
+        except Exception as e:
+            results["errors"].append(f"无法访问认证端点: {str(e)}")
+        
+        # 4. 检查注册端点（发送一个无效的请求）
+        try:
+            response = requests.post(
+                f"{url}/auth/v1/signup",
+                headers={
+                    "apikey": key,
+                    "Content-Type": "application/json"
+                },
+                json={},  # 空的请求体会返回 400，但说明端点可访问
+                timeout=10
+            )
+            results["signup_endpoint_accessible"] = response.status_code in [400, 422]
+        except Exception as e:
+            results["errors"].append(f"无法访问注册端点: {str(e)}")
+        
+        # 5. 检查登录端点（发送一个无效的请求）
+        try:
+            response = requests.post(
+                f"{url}/auth/v1/token",
+                headers={
+                    "apikey": key,
+                    "Content-Type": "application/json"
+                },
+                json={},  # 空的请求体会返回 400，但说明端点可访问
+                timeout=10
+            )
+            results["login_endpoint_accessible"] = response.status_code in [400, 422]
+        except Exception as e:
+            results["errors"].append(f"无法访问登录端点: {str(e)}")
+        
+        # 6. 尝试获取项目信息（检查 Key 是否有效）
+        try:
+            response = requests.get(
+                f"{url}/rest/v1/",
+                headers={
+                    "apikey": key,
+                    "Content-Type": "application/json"
+                },
+                timeout=10
+            )
+            results["api_key_valid"] = response.status_code == 200
+            if response.status_code != 200:
+                results["errors"].append(f"API Key 可能无效 (HTTP {response.status_code})")
+        except Exception as e:
+            results["api_key_valid"] = False
+            results["errors"].append(f"API Key 验证失败: {str(e)}")
+        
+    except Exception as e:
+        results["errors"].append(f"诊断过程出错: {str(e)}")
+    
+    return results
