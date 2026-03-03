@@ -29,26 +29,22 @@ def _get_supabase_credentials():
     
     return url, key
 
-# 创建 Supabase 客户端（延迟初始化）
-supabase: Client = None
-
 def _init_supabase_client():
-    """初始化 Supabase 客户端"""
-    global supabase
-    if supabase is None:
-        url, key = _get_supabase_credentials()
-        if url and key:
-            try:
-                supabase = create_client(url, key)
-                # 验证客户端是否正确创建
-                if supabase is not None:
-                    if not hasattr(supabase, 'auth'):
-                        st.error("❌ Supabase 客户端创建失败：缺少 auth 属性")
-                        return None
-            except Exception as e:
-                st.error(f"❌ 创建 Supabase 客户端时出错: {str(e)}")
-                return None
-    return supabase
+    """初始化 Supabase 客户端（每次都创建新客户端，避免全局变量问题）"""
+    url, key = _get_supabase_credentials()
+    if url and key:
+        try:
+            client = create_client(url, key)
+            # 验证客户端是否正确创建
+            if client is not None:
+                if not hasattr(client, 'auth'):
+                    st.error("❌ Supabase 客户端创建失败：缺少 auth 属性")
+                    return None
+            return client
+        except Exception as e:
+            st.error(f"❌ 创建 Supabase 客户端时出错: {str(e)}")
+            return None
+    return None
 
 
 def get_current_user() -> Optional[dict]:
