@@ -894,78 +894,102 @@ def _renderBudgetAccountDetail(
     """渲染科目明细（实际数和预算数）"""
     st.subheader("科目明细")
 
-    # 合并科目类型信息
-    if not actual_tb.empty:
-        actual_tb = actual_tb.merge(
-            accounts[["account_code", "account_type", "account_name"]],
-            on="account_code",
-            how="left"
-        )
-    if not budget_tb.empty:
-        budget_tb = budget_tb.merge(
-            accounts[["account_code", "account_type", "account_name"]],
-            on="account_code",
-            how="left"
+    try:
+        # 合并科目类型信息
+        if not actual_tb.empty:
+            actual_tb = actual_tb.merge(
+                accounts[["account_code", "account_type", "account_name"]],
+                on="account_code",
+                how="left"
+            )
+        if not budget_tb.empty:
+            budget_tb = budget_tb.merge(
+                accounts[["account_code", "account_type", "account_name"]],
+                on="account_code",
+                how="left"
+            )
+
+        # 选择显示类型
+        detail_type = st.radio(
+            "选择明细类型",
+            ["实际数科目明细", "预算数科目明细"],
+            horizontal=True
         )
 
-    # 选择显示类型
-    detail_type = st.radio(
-        "选择明细类型",
-        ["实际数科目明细", "预算数科目明细"],
-        horizontal=True
-    )
+        if detail_type == "实际数科目明细":
+            if actual_tb.empty:
+                st.info("暂无实际数据。")
+                return
 
-    if detail_type == "实际数科目明细":
-        if actual_tb.empty:
-            st.info("暂无实际数据。")
+            # 过滤期间
+            filtered_data = actual_tb[actual_tb["period"].isin(periods)].copy()
+        else:
+            if budget_tb.empty:
+                st.info("暂无预算数据。")
+                return
+
+            # 过滤期间
+            filtered_data = budget_tb[budget_tb["period"].isin(periods)].copy()
+
+        if filtered_data.empty:
+            st.info("所选期间无数据。")
             return
 
-        # 过滤期间
-        filtered_data = actual_tb[actual_tb["period"].isin(periods)].copy()
-    else:
-        if budget_tb.empty:
-            st.info("暂无预算数据。")
+        # 格式化显示 - 检查列是否存在
+        required_columns = ["account_code", "account_name", "period",
+                           "begin_balance", "debit_total", "credit_total", "end_balance"]
+        available_columns = [col for col in required_columns if col in filtered_data.columns]
+        
+        if len(available_columns) < len(required_columns):
+            missing_cols = set(required_columns) - set(available_columns)
+            st.warning(f"数据缺少以下列: {', '.join(missing_cols)}。将只显示可用列。")
+        
+        if not available_columns:
+            st.error("无可显示的数据列。")
             return
+        
+        display_data = filtered_data[available_columns].copy()
 
-        # 过滤期间
-        filtered_data = budget_tb[budget_tb["period"].isin(periods)].copy()
+        # 列名中文映射
+        column_mapping = {
+            "account_code": "科目编码",
+            "account_name": "科目名称",
+            "period": "会计期间",
+            "begin_balance": "期初余额",
+            "debit_total": "借方发生额",
+            "credit_total": "贷方发生额",
+            "end_balance": "期末余额"
+        }
+        
+        display_data.columns = [column_mapping.get(col, col) for col in display_data.columns]
 
-    if filtered_data.empty:
-        st.info("所选期间无数据。")
-        return
+        # 数值格式化
+        for col in ["期初余额", "借方发生额", "贷方发生额", "期末余额"]:
+            if col in display_data.columns:
+                display_data[col] = display_data[col].apply(lambda x: f"{x:,.2f}" if pd.notnull(x) else "0.00")
 
-    # 格式化显示
-    display_columns = ["account_code", "account_name", "period",
-                   "begin_balance", "debit_total", "credit_total", "end_balance"]
-    display_data = filtered_data[display_columns].copy()
+        st.dataframe(display_data, use_container_width=True, hide_index=True)
 
-    # 列名中文
-    display_data.columns = ["科目编码", "科目名称", "会计期间",
-                        "期初余额", "借方发生额", "贷方发生额", "期末余额"]
+        # 统计信息
+        st.markdown("---")
+        st.markdown("### 📈 统计摘要")
 
-    # 数值格式化
-    for col in ["期初余额", "借方发生额", "贷方发生额", "期末余额"]:
-        display_data[col] = display_data[col].apply(lambda x: f"{x:,.2f}")
+        col1, col2, col3 = st.columns(3)
 
-    st.dataframe(display_data, use_container_width=True, hide_index=True)
+        with col1:
+            total_accounts = filtered_data["account_code"].nunique() if "account_code" in filtered_data.columns else 0
+            st.metric("科目数量", f"{total_accounts} 个")
 
-    # 统计信息
-    st.markdown("---")
-    st.markdown("### 📈 统计摘要")
+        with col2:
+            total_debit = filtered_data["debit_total"].sum() if "debit_total" in filtered_data.columns else 0
+            st.metric("借方总额", f"{total_debit:,.2f}")
 
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        total_accounts = filtered_data["account_code"].nunique()
-        st.metric("科目数量", f"{total_accounts} 个")
-
-    with col2:
-        total_debit = filtered_data["debit_total"].sum()
-        st.metric("借方总额", f"{total_debit:,.2f}")
-
-    with col3:
-        total_credit = filtered_data["credit_total"].sum()
-        st.metric("贷方总额", f"{total_credit:,.2f}")
+        with col3:
+            total_credit = filtered_data["credit_total"].sum() if "credit_total" in filtered_data.columns else 0
+            st.metric("贷方总额", f"{total_credit:,.2f}")
+    except Exception as e:
+        st.error(f"显示科目明细时出错: {str(e)}")
+        st.info("请检查数据格式或联系管理员。")
 
 
 def _renderSampleView() -> None:
