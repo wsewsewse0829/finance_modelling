@@ -96,13 +96,15 @@ def register(email: str, password: str) -> bool:
     try:
         response = supabase.auth.sign_up({
             "email": email,
-            "password": password
+            "password": password,
+            "options": {
+                "email_confirm": True  # 自动确认邮箱，无需邮件验证
+            }
         })
         
         if response.user:
             st.success("🎉 注册成功！")
-            st.info("📧 请检查您的邮箱，点击验证链接完成注册。")
-            st.info("验证后即可登录使用系统。")
+            st.info("✅ 您的账户已创建，可以直接登录使用系统。")
             return True
         else:
             st.error("注册失败，请稍后重试")
