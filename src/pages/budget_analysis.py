@@ -64,14 +64,32 @@ def renderBudgetAnalysisPage() -> None:
         st.info("请选择至少一个会计期间。")
         return
 
-    # 合并科目类型信息
+    # 合并科目类型信息（采用会计报表页的策略：先删除account_name再重新merge）
     if not actual_tb.empty:
         actual_tb["account_code"] = actual_tb["account_code"].astype(str)
+        if "account_name" in actual_tb.columns:
+            actual_tb = actual_tb.drop(columns=["account_name"])
     if not budget_tb.empty:
         budget_tb["account_code"] = budget_tb["account_code"].astype(str)
+        if "account_name" in budget_tb.columns:
+            budget_tb = budget_tb.drop(columns=["account_name"])
     
     accounts_str = accounts.copy()
     accounts_str["account_code"] = accounts_str["account_code"].astype(str)
+    
+    # 重新merge，包含account_type和account_name
+    if not actual_tb.empty:
+        actual_tb = actual_tb.merge(
+            accounts_str[["account_code", "account_type", "account_name"]],
+            on="account_code",
+            how="left"
+        )
+    if not budget_tb.empty:
+        budget_tb = budget_tb.merge(
+            accounts_str[["account_code", "account_type", "account_name"]],
+            on="account_code",
+            how="left"
+        )
 
     # 报表展示标签页
     tab_bs, tab_pl, tab_chart, tab_detail = st.tabs([
@@ -79,41 +97,27 @@ def renderBudgetAnalysisPage() -> None:
     ])
 
     with tab_bs:
-        _renderBalanceSheetComparison(actual_tb, budget_tb, accounts_str, selected_periods)
+        _renderBalanceSheetComparison(actual_tb, budget_tb, selected_periods)
 
     with tab_pl:
-        _renderIncomeStatementComparison(actual_tb, budget_tb, accounts_str, selected_periods)
+        _renderIncomeStatementComparison(actual_tb, budget_tb, selected_periods)
 
     with tab_chart:
-        _renderBudgetComparisonCharts(actual_tb, budget_tb, accounts_str, selected_periods)
+        _renderBudgetComparisonCharts(actual_tb, budget_tb, selected_periods)
 
     with tab_detail:
-        _renderBudgetAccountDetail(actual_tb, budget_tb, accounts_str, selected_periods)
+        _renderBudgetAccountDetail(actual_tb, budget_tb, selected_periods)
 
 
 def _renderBalanceSheetComparison(
     actual_tb: pd.DataFrame,
     budget_tb: pd.DataFrame,
-    accounts: pd.DataFrame,
     periods: list
 ) -> None:
     """渲染资产负债表对比"""
     st.subheader("资产负债表")
 
     try:
-        # 合并科目类型信息
-        if not actual_tb.empty:
-            actual_tb = actual_tb.merge(
-                accounts[["account_code", "account_type", "account_name"]],
-                on="account_code",
-                how="left"
-            )
-        if not budget_tb.empty:
-            budget_tb = budget_tb.merge(
-                accounts[["account_code", "account_type", "account_name"]],
-                on="account_code",
-                how="left"
-            )
 
         # 按科目类型分组
         account_types = ["资产", "负债", "所有者权益"]
@@ -324,26 +328,12 @@ def _createBalanceSheetSummary(
 def _renderIncomeStatementComparison(
     actual_tb: pd.DataFrame,
     budget_tb: pd.DataFrame,
-    accounts: pd.DataFrame,
     periods: list
 ) -> None:
     """渲染利润表对比"""
     st.subheader("利润表")
 
     try:
-        # 合并科目类型信息
-        if not actual_tb.empty:
-            actual_tb = actual_tb.merge(
-                accounts[["account_code", "account_type", "account_name"]],
-                on="account_code",
-                how="left"
-            )
-        if not budget_tb.empty:
-            budget_tb = budget_tb.merge(
-                accounts[["account_code", "account_type", "account_name"]],
-                on="account_code",
-                how="left"
-            )
 
         # 按科目类型分组
         account_types = ["收入", "费用"]
@@ -557,7 +547,6 @@ def _createIncomeStatementSummary(
 def _renderBudgetComparisonCharts(
     actual_tb: pd.DataFrame,
     budget_tb: pd.DataFrame,
-    accounts: pd.DataFrame,
     periods: list
 ) -> None:
     """渲染预实对比图表"""
@@ -569,36 +558,22 @@ def _renderBudgetComparisonCharts(
     )
 
     if chart_type == "资产负债表对比":
-        _renderBalanceSheetComparisonChart(actual_tb, budget_tb, accounts, periods)
+        _renderBalanceSheetComparisonChart(actual_tb, budget_tb, periods)
     elif chart_type == "利润表对比":
-        _renderIncomeStatementComparisonChart(actual_tb, budget_tb, accounts, periods)
+        _renderIncomeStatementComparisonChart(actual_tb, budget_tb, periods)
     elif chart_type == "预实差异分析":
-        _renderDifferenceAnalysisChart(actual_tb, budget_tb, accounts, periods)
+        _renderDifferenceAnalysisChart(actual_tb, budget_tb, periods)
 
 
 def _renderBalanceSheetComparisonChart(
     actual_tb: pd.DataFrame,
     budget_tb: pd.DataFrame,
-    accounts: pd.DataFrame,
     periods: list
 ) -> None:
     """资产负债表对比图"""
     st.markdown("### 资产负债表对比")
 
     try:
-        # 合并科目类型信息
-        if not actual_tb.empty:
-            actual_tb = actual_tb.merge(
-                accounts[["account_code", "account_type", "account_name"]],
-                on="account_code",
-                how="left"
-            )
-        if not budget_tb.empty:
-            budget_tb = budget_tb.merge(
-                accounts[["account_code", "account_type", "account_name"]],
-                on="account_code",
-                how="left"
-            )
 
         # 选择期间
         selected_period = st.selectbox("选择期间", periods)
@@ -673,26 +648,12 @@ def _renderBalanceSheetComparisonChart(
 def _renderIncomeStatementComparisonChart(
     actual_tb: pd.DataFrame,
     budget_tb: pd.DataFrame,
-    accounts: pd.DataFrame,
     periods: list
 ) -> None:
     """利润表对比图"""
     st.markdown("### 利润表对比")
 
     try:
-        # 合并科目类型信息
-        if not actual_tb.empty:
-            actual_tb = actual_tb.merge(
-                accounts[["account_code", "account_type", "account_name"]],
-                on="account_code",
-                how="left"
-            )
-        if not budget_tb.empty:
-            budget_tb = budget_tb.merge(
-                accounts[["account_code", "account_type", "account_name"]],
-                on="account_code",
-                how="left"
-            )
 
         # 选择期间
         selected_period = st.selectbox("选择期间", periods)
@@ -771,26 +732,12 @@ def _renderIncomeStatementComparisonChart(
 def _renderDifferenceAnalysisChart(
     actual_tb: pd.DataFrame,
     budget_tb: pd.DataFrame,
-    accounts: pd.DataFrame,
     periods: list
 ) -> None:
     """预实差异分析图"""
     st.markdown("### 预实差异分析")
 
     try:
-        # 合并科目类型信息
-        if not actual_tb.empty:
-            actual_tb = actual_tb.merge(
-                accounts[["account_code", "account_type", "account_name"]],
-                on="account_code",
-                how="left"
-            )
-        if not budget_tb.empty:
-            budget_tb = budget_tb.merge(
-                accounts[["account_code", "account_type", "account_name"]],
-                on="account_code",
-                how="left"
-            )
 
         # 选择期间
         selected_period = st.selectbox("选择期间", periods, key="diff_period")
@@ -907,26 +854,12 @@ def _renderDifferenceAnalysisChart(
 def _renderBudgetAccountDetail(
     actual_tb: pd.DataFrame,
     budget_tb: pd.DataFrame,
-    accounts: pd.DataFrame,
     periods: list
 ) -> None:
     """渲染科目明细（实际数和预算数）"""
     st.subheader("科目明细")
 
     try:
-        # 合并科目类型信息
-        if not actual_tb.empty:
-            actual_tb = actual_tb.merge(
-                accounts[["account_code", "account_type", "account_name"]],
-                on="account_code",
-                how="left"
-            )
-        if not budget_tb.empty:
-            budget_tb = budget_tb.merge(
-                accounts[["account_code", "account_type", "account_name"]],
-                on="account_code",
-                how="left"
-            )
 
         # 选择显示类型
         detail_type = st.radio(
