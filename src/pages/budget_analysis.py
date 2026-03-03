@@ -440,7 +440,7 @@ def _createIncomeComparisonTable(
 ) -> pd.DataFrame:
     """创建利润表对比表 - 显示实际|预算|预实差异三列
     
-    逻辑：实际和预算列显示选中期间中最后一个期间的发生额
+    逻辑：实际和预算列显示选中期间发生额的加总
     """
     result_rows = []
 
@@ -451,52 +451,40 @@ def _createIncomeComparisonTable(
     if not budget_pivot.empty:
         all_accounts.update(budget_pivot.index)
 
-    # 获取最后一个期间的值（如果有多个期间，取最后一个）
-    if periods:
-        last_period = periods[-1]
-    else:
-        last_period = None
-
     for account_name in sorted(all_accounts):
-        # 获取最后一个期间的实际值
+        # 汇总所有期间的实际值
         actual_value = 0
-        if not actual_pivot.empty and account_name in actual_pivot.index and last_period:
+        if not actual_pivot.empty and account_name in actual_pivot.index:
             try:
-                # 尝试获取最后一个期间的值
-                if last_period in actual_pivot.columns:
-                    actual_value = actual_pivot.loc[account_name, last_period]
+                # 尝试直接获取期间数据
+                available_periods = [p for p in periods if p in actual_pivot.columns]
+                if available_periods:
+                    actual_value = actual_pivot.loc[account_name, available_periods].sum()
                 else:
-                    # 如果最后一个期间不存在，尝试获取可用的最后一个期间
-                    available_periods = [p for p in periods if p in actual_pivot.columns]
-                    if available_periods:
-                        actual_value = actual_pivot.loc[account_name, available_periods[-1]]
+                    # 如果列名是多层索引或格式不对，遍历所有列求和
+                    actual_value = actual_pivot.loc[account_name].sum()
             except (KeyError, TypeError):
-                # 如果直接访问失败，尝试获取最后一个可用值
+                # 如果直接访问失败，遍历所有列
                 try:
-                    available_periods = [p for p in periods if p in actual_pivot.columns]
-                    if available_periods:
-                        actual_value = actual_pivot.loc[account_name, available_periods[-1]]
+                    actual_value = actual_pivot.loc[account_name].sum()
                 except:
                     actual_value = 0
 
-        # 获取最后一个期间的预算值
+        # 汇总所有期间的预算值
         budget_value = 0
-        if not budget_pivot.empty and account_name in budget_pivot.index and last_period:
+        if not budget_pivot.empty and account_name in budget_pivot.index:
             try:
-                # 尝试获取最后一个期间的值
-                if last_period in budget_pivot.columns:
-                    budget_value = budget_pivot.loc[account_name, last_period]
+                # 尝试直接获取期间数据
+                available_periods = [p for p in periods if p in budget_pivot.columns]
+                if available_periods:
+                    budget_value = budget_pivot.loc[account_name, available_periods].sum()
                 else:
-                    # 如果最后一个期间不存在，尝试获取可用的最后一个期间
-                    available_periods = [p for p in periods if p in budget_pivot.columns]
-                    if available_periods:
-                        budget_value = budget_pivot.loc[account_name, available_periods[-1]]
+                    # 如果列名是多层索引或格式不对，遍历所有列求和
+                    budget_value = budget_pivot.loc[account_name].sum()
             except (KeyError, TypeError):
-                # 如果直接访问失败，尝试获取最后一个可用值
+                # 如果直接访问失败，遍历所有列
                 try:
-                    available_periods = [p for p in periods if p in budget_pivot.columns]
-                    if available_periods:
-                        budget_value = budget_pivot.loc[account_name, available_periods[-1]]
+                    budget_value = budget_pivot.loc[account_name].sum()
                 except:
                     budget_value = 0
 
