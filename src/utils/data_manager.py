@@ -49,10 +49,13 @@ def loadGeneralLedger() -> pd.DataFrame:
         df["credit_amount"] = pd.to_numeric(df["credit_amount"], errors="coerce").fillna(0)
         # 过滤掉日期转换失败的记录
         df = df[df["entry_date"].notna()]
+        # 如果actual/budget列不存在，添加默认值"实际"
+        if "actual_budget" not in df.columns:
+            df["actual_budget"] = "实际"
         return df
     return pd.DataFrame(columns=[
         "id", "entry_date", "voucher_no", "account_code",
-        "account_name", "debit_amount", "credit_amount", "summary", "user_id"
+        "account_name", "debit_amount", "credit_amount", "summary", "user_id", "actual_budget"
     ])
 
 

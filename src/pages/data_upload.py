@@ -24,6 +24,7 @@ REQUIRED_COLUMNS = [
     "entry_date", "voucher_no", "account_code",
     "account_name", "debit_amount", "credit_amount",
 ]
+OPTIONAL_COLUMNS = ["actual_budget", "summary"]
 
 
 def renderDataUploadPage() -> None:
@@ -97,6 +98,14 @@ def _renderUploadSection() -> None:
                 df["summary"] = ""
             if "user_id" not in df.columns:
                 df["user_id"] = 1
+            # 如果actual_budget列不存在，添加默认值"实际"
+            if "actual_budget" not in df.columns:
+                df["actual_budget"] = "实际"
+            else:
+                # 确保actual_budget列的值为"实际"或"预算"
+                df["actual_budget"] = df["actual_budget"].fillna("实际").apply(
+                    lambda x: x if x in ["实际", "预算"] else "实际"
+                )
 
             # 借贷平衡校验
             st.markdown("#### 借贷平衡校验")
@@ -274,6 +283,7 @@ def _renderTemplateDownload() -> None:
         "debit_amount": [10000.00, 0.00, 3000.00, 0.00],
         "credit_amount": [0.00, 10000.00, 0.00, 3000.00],
         "summary": ["收到工资", "收到工资", "支付房租", "支付房租"],
+        "actual_budget": ["实际", "实际", "实际", "实际"],
     }
 
     template_df = pd.DataFrame(template_data)

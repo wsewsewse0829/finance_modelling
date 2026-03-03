@@ -8,8 +8,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from src.utils.data_manager import loadTrialBalance, loadReport, loadAccounts
-from src.utils.accounting import generateReport, validateReport
+from src.utils.data_manager import loadGeneralLedger, loadAccounts
+from src.utils.accounting import generateTrialBalance, generateReport, validateReport
 
 
 def renderFinancialStatementsPage() -> None:
@@ -18,13 +18,20 @@ def renderFinancialStatementsPage() -> None:
     st.markdown("---")
 
     # 加载数据
-    trial_balance = loadTrialBalance()
+    ledger = loadGeneralLedger()
     accounts = loadAccounts()
 
-    if trial_balance.empty:
-        st.warning("暂无数据。请先在「数据上传」页面上传序时账数据。")
+    # 过滤只显示实际数据
+    actual_ledger = ledger[ledger["actual_budget"] == "实际"].copy()
+    
+    if actual_ledger.empty:
+        st.warning("暂无实际数据。请先在「数据上传」页面上传序时账数据。")
         _renderSampleView()
         return
+    
+    # 从实际数据生成科目余额表
+    from src.utils.accounting import generateTrialBalance
+    trial_balance = generateTrialBalance(actual_ledger, accounts)
 
     # 生成报表
     report = generateReport(trial_balance, accounts)

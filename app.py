@@ -11,11 +11,13 @@ from src.components.sidebar import (
     renderSidebar,
     PAGE_HOME,
     PAGE_FINANCIAL_STATEMENTS,
+    PAGE_BUDGET_ANALYSIS,
     PAGE_ACCOUNT_MANAGEMENT,
     PAGE_DATA_UPLOAD,
 )
 from src.pages.home import renderHomePage
 from src.pages.financial_statements import renderFinancialStatementsPage
+from src.pages.budget_analysis import renderBudgetAnalysisPage
 from src.pages.account_management import renderAccountManagementPage
 from src.pages.data_upload import renderDataUploadPage
 
@@ -39,6 +41,8 @@ def main():
         renderHomePage()
     elif selected_page == PAGE_FINANCIAL_STATEMENTS:
         renderFinancialStatementsPage()
+    elif selected_page == PAGE_BUDGET_ANALYSIS:
+        renderBudgetAnalysisPage()
     elif selected_page == PAGE_ACCOUNT_MANAGEMENT:
         renderAccountManagementPage()
     elif selected_page == PAGE_DATA_UPLOAD:
