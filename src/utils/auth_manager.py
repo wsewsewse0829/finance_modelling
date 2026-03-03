@@ -4,9 +4,9 @@
 """
 
 import os
-from supabase import create_client, Client
+import requests
 import streamlit as st
-from typing import Optional
+from typing import Optional, Dict, Any
 
 # 从环境变量或 Streamlit secrets 获取 Supabase 凭证
 # 本地开发环境使用环境变量，Streamlit Cloud 使用 secrets
@@ -29,22 +29,49 @@ def _get_supabase_credentials():
     
     return url, key
 
-def _init_supabase_client():
-    """初始化 Supabase 客户端（每次都创建新客户端，避免全局变量问题）"""
+
+def _make_auth_request(method: str, endpoint: str, data: Dict[str, Any] = None, headers: Dict[str, str] = None) -> Dict[str, Any]:
+    """发送认证请求到 Supabase API"""
     url, key = _get_supabase_credentials()
-    if url and key:
-        try:
-            client = create_client(url, key)
-            # 验证客户端是否正确创建
-            if client is not None:
-                if not hasattr(client, 'auth'):
-                    st.error("❌ Supabase 客户端创建失败：缺少 auth 属性")
-                    return None
-            return client
-        except Exception as e:
-            st.error(f"❌ 创建 Supabase 客户端时出错: {str(e)}")
-            return None
-    return None
+    
+    if not url or not key:
+        raise Exception("Supabase 凭证未配置")
+    
+    auth_url = f"{url}{endpoint}"
+    
+    # 默认请求头
+    default_headers = {
+        "apikey": key,
+        "Content-Type": "application/json"
+    }
+    
+    # 合并自定义请求头
+    if headers:
+        default_headers.update(headers)
+    
+    try:
+        if method == "GET":
+            response = requests.get(auth_url, headers=default_headers)
+        elif method == "POST":
+            response = requests.post(auth_url, headers=default_headers, json=data)
+        elif method == "DELETE":
+            response = requests.delete(auth_url, headers=default_headers)
+        else:
+            raise Exception(f"不支持的 HTTP 方法: {method}")
+        
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        error_detail = ""
+        if hasattr(e.response, 'json'):
+            try:
+                error_json = e.response.json()
+                error_detail = error_json.get('message', str(e))
+            except:
+                error_detail = str(e)
+        else:
+            error_detail = str(e)
+        raise Exception(error_detail)
 
 
 def get_current_user() -> Optional[dict]:
@@ -77,38 +104,32 @@ def login(email: str, password: str) -> bool:
     st.write(f"调试: URL 是否存在: {bool(url)}")
     st.write(f"调试: Key 是否存在: {bool(key)}")
     
-    client = _init_supabase_client()
-    st.write(f"调试: 客户端是否初始化: {client is not None}")
-    
-    if client is None:
-        st.error("❌ Supabase 客户端未正确初始化，请检查配置")
-        return False
-    
     try:
-        st.write("调试: 尝试登录...")
-        st.write(f"调试: client 类型: {type(client)}")
-        st.write(f"调试: client 属性: {dir(client)}")
-        st.write(f"调试: client.auth 存在: {hasattr(client, 'auth')}")
-        if hasattr(client, 'auth'):
-            st.write(f"调试: client.auth 值: {client.auth}")
-            st.write(f"调试: client.auth 类型: {type(client.auth)}")
+        st.write("调试: 尝试登录（使用 REST API）...")
         
-        response = client.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
+        # 使用 Supabase REST API 进行登录
+        response = _make_auth_request(
+            method="POST",
+            endpoint="/auth/v1/token?grant_type=password",
+            data={
+                "email": email,
+                "password": password
+            }
+        )
+        
         st.write(f"调试: 登录响应: {response}")
         
-        if response.user:
+        # 检查响应
+        if "access_token" in response and "user" in response:
             # 保存用户信息到 session
-            st.session_state.user_id = str(response.user.id)
-            st.session_state.user_email = response.user.email
-            st.session_state.access_token = response.session.access_token
+            st.session_state.user_id = str(response["user"]["id"])
+            st.session_state.user_email = response["user"]["email"]
+            st.session_state.access_token = response["access_token"]
             
-            st.success(f"欢迎回来，{response.user.email}！")
+            st.success(f"欢迎回来，{response['user']['email']}！")
             return True
         else:
-            st.error("登录失败：邮箱或密码错误")
+            st.error("登录失败：响应格式错误")
             return False
     except Exception as e:
         error_msg = str(e)
@@ -131,34 +152,39 @@ def register(email: str, password: str) -> bool:
     Returns:
         bool: 注册是否成功
     """
-    client = _init_supabase_client()
-    if client is None:
-        st.error("❌ Supabase 客户端未正确初始化，请检查配置")
-        return False
-    
     try:
-        response = client.auth.sign_up({
-            "email": email,
-            "password": password,
-            "options": {
-                "email_confirm": True  # 自动确认邮箱，无需邮件验证
-            }
-        })
+        st.write("调试: 尝试注册（使用 REST API）...")
         
-        if response.user:
+        # 使用 Supabase REST API 进行注册
+        response = _make_auth_request(
+            method="POST",
+            endpoint="/auth/v1/signup",
+            data={
+                "email": email,
+                "password": password,
+                "options": {
+                    "email_confirm": True  # 自动确认邮箱，无需邮件验证
+                }
+            }
+        )
+        
+        st.write(f"调试: 注册响应: {response}")
+        
+        # 检查响应
+        if "access_token" in response and "user" in response:
             st.success("🎉 注册成功！")
             st.info("✅ 您的账户已创建，可以直接登录使用系统。")
             return True
         else:
-            st.error("注册失败，请稍后重试")
+            st.error("注册失败：响应格式错误")
             return False
     except Exception as e:
         error_msg = str(e)
-        if "User already registered" in error_msg:
+        if "User already registered" in error_msg or "duplicate" in error_msg.lower():
             st.error("注册失败：该邮箱已被注册")
-        elif "Password should be at least 6 characters" in error_msg:
+        elif "Password should be at least 6 characters" in error_msg or "password" in error_msg.lower():
             st.error("注册失败：密码至少需要 6 个字符")
-        elif "Unable to validate email address" in error_msg:
+        elif "Unable to validate email address" in error_msg or "email" in error_msg.lower():
             st.error("注册失败：邮箱格式不正确")
         else:
             st.error(f"注册失败: {error_msg}")
@@ -167,19 +193,17 @@ def register(email: str, password: str) -> bool:
 
 def logout() -> None:
     """用户登出"""
-    client = _init_supabase_client()
-    if client is None:
-        st.warning("⚠️ Supabase 客户端未初始化")
-        # 仍然清除 session
-        keys_to_clear = ['user_id', 'user_email', 'access_token']
-        for key in keys_to_clear:
-            if key in st.session_state:
-                del st.session_state[key]
-        st.rerun()
-        return
-    
     try:
-        client.auth.sign_out()
+        # 使用 Supabase REST API 进行登出
+        if 'access_token' in st.session_state:
+            headers = {
+                "Authorization": f"Bearer {st.session_state.access_token}"
+            }
+            _make_auth_request(
+                method="POST",
+                endpoint="/auth/v1/logout",
+                headers=headers
+            )
         
         # 清除 session 中的用户信息
         keys_to_clear = ['user_id', 'user_email', 'access_token']
@@ -244,12 +268,22 @@ def refresh_session() -> bool:
         bool: 刷新是否成功
     """
     try:
-        client = _init_supabase_client()
-        if client and 'access_token' in st.session_state:
-            response = client.auth.get_session()
-            if response:
-                st.session_state.access_token = response.access_token
-                return True
+        if 'access_token' not in st.session_state:
+            return False
+        
+        headers = {
+            "Authorization": f"Bearer {st.session_state.access_token}"
+        }
+        
+        # 使用 Supabase REST API 获取当前用户
+        response = _make_auth_request(
+            method="GET",
+            endpoint="/auth/v1/user",
+            headers=headers
+        )
+        
+        if response and "id" in response:
+            return True
         return False
     except Exception:
         return False
