@@ -212,26 +212,52 @@ def _createComparisonTable(
 
     for account_name in sorted(all_accounts):
         # 汇总所有期间的实际值
+        actual_value = 0
         if not actual_pivot.empty and account_name in actual_pivot.index:
-            actual_value = actual_pivot.loc[account_name, periods].sum() if any(p in actual_pivot.columns for p in periods) else 0
-        else:
-            actual_value = 0
+            try:
+                # 尝试直接获取期间数据
+                available_periods = [p for p in periods if p in actual_pivot.columns]
+                if available_periods:
+                    actual_value = actual_pivot.loc[account_name, available_periods].sum()
+                else:
+                    # 如果列名是多层索引或格式不对，遍历所有列求和
+                    actual_value = actual_pivot.loc[account_name].sum()
+            except (KeyError, TypeError):
+                # 如果直接访问失败，遍历所有列
+                try:
+                    actual_value = actual_pivot.loc[account_name].sum()
+                except:
+                    actual_value = 0
 
         # 汇总所有期间的预算值
+        budget_value = 0
         if not budget_pivot.empty and account_name in budget_pivot.index:
-            budget_value = budget_pivot.loc[account_name, periods].sum() if any(p in budget_pivot.columns for p in periods) else 0
-        else:
-            budget_value = 0
+            try:
+                # 尝试直接获取期间数据
+                available_periods = [p for p in periods if p in budget_pivot.columns]
+                if available_periods:
+                    budget_value = budget_pivot.loc[account_name, available_periods].sum()
+                else:
+                    # 如果列名是多层索引或格式不对，遍历所有列求和
+                    budget_value = budget_pivot.loc[account_name].sum()
+            except (KeyError, TypeError):
+                # 如果直接访问失败，遍历所有列
+                try:
+                    budget_value = budget_pivot.loc[account_name].sum()
+                except:
+                    budget_value = 0
 
         # 计算差异
         difference = actual_value - budget_value
 
-        result_rows.append({
-            "account_name": account_name,
-            "actual": actual_value,
-            "budget": budget_value,
-            "difference": difference
-        })
+        # 只有当实际或预算不为0时才添加行
+        if actual_value != 0 or budget_value != 0:
+            result_rows.append({
+                "account_name": account_name,
+                "actual": actual_value,
+                "budget": budget_value,
+                "difference": difference
+            })
 
     if not result_rows:
         return pd.DataFrame()
@@ -419,26 +445,52 @@ def _createIncomeComparisonTable(
 
     for account_name in sorted(all_accounts):
         # 汇总所有期间的实际值
+        actual_value = 0
         if not actual_pivot.empty and account_name in actual_pivot.index:
-            actual_value = actual_pivot.loc[account_name, periods].sum() if any(p in actual_pivot.columns for p in periods) else 0
-        else:
-            actual_value = 0
+            try:
+                # 尝试直接获取期间数据
+                available_periods = [p for p in periods if p in actual_pivot.columns]
+                if available_periods:
+                    actual_value = actual_pivot.loc[account_name, available_periods].sum()
+                else:
+                    # 如果列名是多层索引或格式不对，遍历所有列求和
+                    actual_value = actual_pivot.loc[account_name].sum()
+            except (KeyError, TypeError):
+                # 如果直接访问失败，遍历所有列
+                try:
+                    actual_value = actual_pivot.loc[account_name].sum()
+                except:
+                    actual_value = 0
 
         # 汇总所有期间的预算值
+        budget_value = 0
         if not budget_pivot.empty and account_name in budget_pivot.index:
-            budget_value = budget_pivot.loc[account_name, periods].sum() if any(p in budget_pivot.columns for p in periods) else 0
-        else:
-            budget_value = 0
+            try:
+                # 尝试直接获取期间数据
+                available_periods = [p for p in periods if p in budget_pivot.columns]
+                if available_periods:
+                    budget_value = budget_pivot.loc[account_name, available_periods].sum()
+                else:
+                    # 如果列名是多层索引或格式不对，遍历所有列求和
+                    budget_value = budget_pivot.loc[account_name].sum()
+            except (KeyError, TypeError):
+                # 如果直接访问失败，遍历所有列
+                try:
+                    budget_value = budget_pivot.loc[account_name].sum()
+                except:
+                    budget_value = 0
 
         # 计算差异
         difference = actual_value - budget_value
 
-        result_rows.append({
-            "account_name": account_name,
-            "actual": actual_value,
-            "budget": budget_value,
-            "difference": difference
-        })
+        # 只有当实际或预算不为0时才添加行
+        if actual_value != 0 or budget_value != 0:
+            result_rows.append({
+                "account_name": account_name,
+                "actual": actual_value,
+                "budget": budget_value,
+                "difference": difference
+            })
 
     if not result_rows:
         return pd.DataFrame()
