@@ -133,6 +133,18 @@ def login(email: str, password: str) -> bool:
         else:
             st.error("登录失败：响应格式错误")
             return False
+    except requests.exceptions.HTTPError as e:
+        # 显示详细的错误信息
+        st.error(f"登录失败: HTTP {e.response.status_code} 错误")
+        try:
+            error_json = e.response.json()
+            st.write(f"调试: 错误详情: {error_json}")
+            error_msg = error_json.get('message', error_json.get('error_description', str(e)))
+            st.error(f"详细错误: {error_msg}")
+        except:
+            st.write(f"调试: 响应内容: {e.response.text}")
+            st.error(f"详细错误: {e.response.text}")
+        return False
     except Exception as e:
         error_msg = str(e)
         if "Invalid login credentials" in error_msg:
