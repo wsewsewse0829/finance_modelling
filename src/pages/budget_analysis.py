@@ -120,42 +120,55 @@ def _renderBalanceSheetComparison(
     for account_type in account_types:
         st.markdown(f"#### {account_type}")
 
-        # 获取实际数据和预算数据
-        if not actual_tb.empty and "account_type" in actual_tb.columns:
-            actual_data = actual_tb[actual_tb["account_type"] == account_type].copy()
-            if not actual_data.empty:
-                actual_pivot = actual_data.pivot_table(
-                    index="account_name",
-                    columns="period",
-                    values="end_balance",
-                    aggfunc="sum"
-                )
-            else:
-                actual_pivot = pd.DataFrame()
-        else:
+        try:
+            # 获取实际数据和预算数据
             actual_pivot = pd.DataFrame()
-
-        if not budget_tb.empty and "account_type" in budget_tb.columns:
-            budget_data = budget_tb[budget_tb["account_type"] == account_type].copy()
-            if not budget_data.empty:
-                budget_pivot = budget_data.pivot_table(
-                    index="account_name",
-                    columns="period",
-                    values="end_balance",
-                    aggfunc="sum"
-                )
-            else:
-                budget_pivot = pd.DataFrame()
-        else:
             budget_pivot = pd.DataFrame()
 
-        # 创建对比表
-        comparison_df = _createComparisonTable(
-            actual_pivot, budget_pivot, periods
-        )
+            if not actual_tb.empty and "account_type" in actual_tb.columns:
+                actual_data = actual_tb[actual_tb["account_type"] == account_type].copy()
+                if not actual_data.empty and all(col in actual_data.columns for col in ["account_name", "period", "end_balance"]):
+                    try:
+                        actual_pivot = actual_data.pivot_table(
+                            index="account_name",
+                            columns="period",
+                            values="end_balance",
+                            aggfunc="sum"
+                        )
+                    except Exception as pivot_error:
+                        st.warning(f"实际数据{account_type}透视表生成失败: {str(pivot_error)}")
+                        actual_pivot = pd.DataFrame()
 
-        if not comparison_df.empty:
-            st.dataframe(comparison_df.style.format({"实际": "{:.2f}", "预算": "{:.2f}", "预实差异": "{:.2f}"}), use_container_width=True)
+            if not budget_tb.empty and "account_type" in budget_tb.columns:
+                budget_data = budget_tb[budget_tb["account_type"] == account_type].copy()
+                if not budget_data.empty and all(col in budget_data.columns for col in ["account_name", "period", "end_balance"]):
+                    try:
+                        budget_pivot = budget_data.pivot_table(
+                            index="account_name",
+                            columns="period",
+                            values="end_balance",
+                            aggfunc="sum"
+                        )
+                    except Exception as pivot_error:
+                        st.warning(f"预算数据{account_type}透视表生成失败: {str(pivot_error)}")
+                        budget_pivot = pd.DataFrame()
+
+            # 创建对比表
+            try:
+                comparison_df = _createComparisonTable(
+                    actual_pivot, budget_pivot, periods
+                )
+            except Exception as comp_error:
+                st.warning(f"创建{account_type}对比表失败: {str(comp_error)}")
+                comparison_df = pd.DataFrame()
+
+            if not comparison_df.empty:
+                st.dataframe(comparison_df.style.format({"实际": "{:.2f}", "预算": "{:.2f}", "预实差异": "{:.2f}"}), use_container_width=True)
+            elif actual_pivot.empty and budget_pivot.empty:
+                st.info(f"暂无{account_type}数据。")
+        except Exception as e:
+            st.warning(f"生成{account_type}对比表时遇到问题，已跳过。错误详情: {str(e)}")
+            continue
 
     # 显示汇总数据
     st.markdown("---")
