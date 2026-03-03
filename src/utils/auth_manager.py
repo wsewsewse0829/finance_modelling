@@ -14,7 +14,12 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", st.secrets.get("SUPABASE_URL", ""))
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", st.secrets.get("SUPABASE_KEY", ""))
 
 # 创建 Supabase 客户端
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase: Client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+else:
+    st.error("❌ Supabase 配置错误：未找到 SUPABASE_URL 或 SUPABASE_KEY")
+    st.info("请在 Streamlit Cloud secrets 中配置 Supabase 凭证")
 
 
 def get_current_user() -> Optional[dict]:
@@ -42,6 +47,10 @@ def login(email: str, password: str) -> bool:
     Returns:
         bool: 登录是否成功
     """
+    if supabase is None:
+        st.error("❌ Supabase 客户端未正确初始化，请检查配置")
+        return False
+    
     try:
         response = supabase.auth.sign_in_with_password({
             "email": email,
@@ -80,6 +89,10 @@ def register(email: str, password: str) -> bool:
     Returns:
         bool: 注册是否成功
     """
+    if supabase is None:
+        st.error("❌ Supabase 客户端未正确初始化，请检查配置")
+        return False
+    
     try:
         response = supabase.auth.sign_up({
             "email": email,
@@ -109,6 +122,16 @@ def register(email: str, password: str) -> bool:
 
 def logout() -> None:
     """用户登出"""
+    if supabase is None:
+        st.warning("⚠️ Supabase 客户端未初始化")
+        # 仍然清除 session
+        keys_to_clear = ['user_id', 'user_email', 'access_token']
+        for key in keys_to_clear:
+            if key in st.session_state:
+                del st.session_state[key]
+        st.rerun()
+        return
+    
     try:
         supabase.auth.sign_out()
         
