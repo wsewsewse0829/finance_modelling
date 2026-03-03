@@ -5,9 +5,27 @@
 
 import streamlit as st
 import os
+import sys
 
 # 导入认证模块
 from src.utils.auth_manager import check_auth, logout, get_current_user, login, register
+
+# 检查 Supabase 配置并显示诊断信息
+def _check_supabase_config():
+    """检查 Supabase 配置并显示诊断信息"""
+    supabase_url = os.getenv("SUPABASE_URL", "")
+    supabase_key = os.getenv("SUPABASE_KEY", "")
+    
+    # 尝试从 st.secrets 获取
+    try:
+        if not supabase_url:
+            supabase_url = st.secrets.get("SUPABASE_URL", "")
+        if not supabase_key:
+            supabase_key = st.secrets.get("SUPABASE_KEY", "")
+    except Exception as e:
+        pass
+    
+    return supabase_url, supabase_key
 
 # 导入页面组件
 from src.components.sidebar import (
@@ -76,8 +94,44 @@ def main():
 def _renderAuthPage():
     """渲染登录/注册页面"""
     
+    # 检查 Supabase 配置
+    supabase_url, supabase_key = _check_supabase_config()
+    
     # 标题
     st.title("🔐 用户认证")
+    
+    # 显示配置诊断信息
+    with st.expander("🔧 配置诊断信息（点击展开）", expanded=False):
+        st.markdown("### Supabase 配置状态")
+        
+        if supabase_url:
+            st.success(f"✅ SUPABASE_URL 已配置: {supabase_url[:50]}...")
+        else:
+            st.error("❌ SUPABASE_URL 未配置")
+        
+        if supabase_key:
+            st.success(f"✅ SUPABASE_KEY 已配置: {supabase_key[:20]}...")
+        else:
+            st.error("❌ SUPABASE_KEY 未配置")
+        
+        if not supabase_url or not supabase_key:
+            st.markdown("---")
+            st.markdown("### 🔑 如何配置 Supabase 凭证")
+            st.markdown("""
+            1. 登录 [Supabase 控制台](https://supabase.com/dashboard)
+            2. 选择您的项目
+            3. 进入 **Settings** → **API**
+            4. 复制 **Project URL** 和 **anon/public** 密钥
+            5. 在 Streamlit Cloud 配置 Secrets：
+               - 点击 "Manage app" → "Settings"
+               - 在 "Secrets" 部分添加：
+               ```
+               SUPABASE_URL = "your_project_url"
+               SUPABASE_KEY = "your_anon_key"
+               ```
+            6. 点击 "Save" 保存并刷新页面
+            """)
+    
     st.markdown("---")
     
     # 标签页
