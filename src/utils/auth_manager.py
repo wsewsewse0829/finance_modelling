@@ -86,6 +86,13 @@ def login(email: str, password: str) -> bool:
     
     try:
         st.write("调试: 尝试登录...")
+        st.write(f"调试: client 类型: {type(client)}")
+        st.write(f"调试: client 属性: {dir(client)}")
+        st.write(f"调试: client.auth 存在: {hasattr(client, 'auth')}")
+        if hasattr(client, 'auth'):
+            st.write(f"调试: client.auth 值: {client.auth}")
+            st.write(f"调试: client.auth 类型: {type(client.auth)}")
+        
         response = client.auth.sign_in_with_password({
             "email": email,
             "password": password
