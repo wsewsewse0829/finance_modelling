@@ -10,16 +10,36 @@ from typing import Optional
 
 # 从环境变量或 Streamlit secrets 获取 Supabase 凭证
 # 本地开发环境使用环境变量，Streamlit Cloud 使用 secrets
-SUPABASE_URL = os.getenv("SUPABASE_URL", st.secrets.get("SUPABASE_URL", ""))
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", st.secrets.get("SUPABASE_KEY", ""))
+def _get_supabase_credentials():
+    """获取 Supabase 凭证"""
+    # 尝试从环境变量获取
+    url = os.getenv("SUPABASE_URL", "")
+    key = os.getenv("SUPABASE_KEY", "")
+    
+    # 如果环境变量中没有，尝试从 st.secrets 获取
+    if not url or not key:
+        try:
+            if not url:
+                url = st.secrets.get("SUPABASE_URL", "")
+            if not key:
+                key = st.secrets.get("SUPABASE_KEY", "")
+        except Exception:
+            # st.secrets 可能还未初始化
+            pass
+    
+    return url, key
 
-# 创建 Supabase 客户端
+# 创建 Supabase 客户端（延迟初始化）
 supabase: Client = None
-if SUPABASE_URL and SUPABASE_KEY:
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-else:
-    st.error("❌ Supabase 配置错误：未找到 SUPABASE_URL 或 SUPABASE_KEY")
-    st.info("请在 Streamlit Cloud secrets 中配置 Supabase 凭证")
+
+def _init_supabase_client():
+    """初始化 Supabase 客户端"""
+    global supabase
+    if supabase is None:
+        url, key = _get_supabase_credentials()
+        if url and key:
+            supabase = create_client(url, key)
+    return supabase
 
 
 def get_current_user() -> Optional[dict]:
@@ -47,7 +67,8 @@ def login(email: str, password: str) -> bool:
     Returns:
         bool: 登录是否成功
     """
-    if supabase is None:
+    client = _init_supabase_client()
+    if client is None:
         st.error("❌ Supabase 客户端未正确初始化，请检查配置")
         return False
     
@@ -89,7 +110,8 @@ def register(email: str, password: str) -> bool:
     Returns:
         bool: 注册是否成功
     """
-    if supabase is None:
+    client = _init_supabase_client()
+    if client is None:
         st.error("❌ Supabase 客户端未正确初始化，请检查配置")
         return False
     
@@ -124,7 +146,8 @@ def register(email: str, password: str) -> bool:
 
 def logout() -> None:
     """用户登出"""
-    if supabase is None:
+    client = _init_supabase_client()
+    if client is None:
         st.warning("⚠️ Supabase 客户端未初始化")
         # 仍然清除 session
         keys_to_clear = ['user_id', 'user_email', 'access_token']
