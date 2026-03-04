@@ -665,7 +665,8 @@ def _renderBalanceSheetComparisonChart(
             title=f"{account_type_filter} - 实际 vs 预算 ({selected_period})",
             xaxis_title="科目名称",
             yaxis_title="期末余额",
-            height=500
+            height=500,
+            showlegend=False  # 隐藏图例，X轴已显示科目名称
         )
 
         st.plotly_chart(fig, use_container_width=True)
@@ -749,7 +750,8 @@ def _renderIncomeStatementComparisonChart(
             title=f"{account_type_filter} - 实际 vs 预算 ({selected_period})",
             xaxis_title="科目名称",
             yaxis_title=y_title,
-            height=500
+            height=500,
+            showlegend=False  # 隐藏图例，X轴已显示科目名称
         )
 
         st.plotly_chart(fig, use_container_width=True)
