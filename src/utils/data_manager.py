@@ -122,6 +122,9 @@ def saveAccounts(df: pd.DataFrame) -> None:
                 record['debit_amount'] = int(float(record.get('debit_amount', 0)))
             if 'credit_amount' in record:
                 record['credit_amount'] = int(float(record.get('credit_amount', 0)))
+            # 移除 id 字段，让数据库自动生成
+            if 'id' in record:
+                del record['id']
         
         # 批量插入新数据（如果数据量大，可以考虑分批插入）
         if data:
@@ -206,6 +209,9 @@ def saveGeneralLedger(df: pd.DataFrame) -> None:
                 record['debit_amount'] = int(float(record.get('debit_amount', 0)))
             if 'credit_amount' in record:
                 record['credit_amount'] = int(float(record.get('credit_amount', 0)))
+            # 移除 id 字段，让数据库自动生成
+            if 'id' in record:
+                del record['id']
 
         # 批量插入新数据（如果数据量大，可以考虑分批插入）
         if data:
