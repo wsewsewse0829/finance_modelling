@@ -117,11 +117,12 @@ def saveAccounts(df: pd.DataFrame) -> None:
         data = df.to_dict('records')
         for record in data:
             record['user_id'] = user_id
-            # 确保金额字段是整数类型，避免数据库类型错误
+            # 确保金额字段是正确的数值类型（支持小数）
+            # 数据库字段类型是 DECIMAL(15,2)，需要保留小数精度
             if 'debit_amount' in record:
-                record['debit_amount'] = int(float(record.get('debit_amount', 0)))
+                record['debit_amount'] = float(record.get('debit_amount', 0))
             if 'credit_amount' in record:
-                record['credit_amount'] = int(float(record.get('credit_amount', 0)))
+                record['credit_amount'] = float(record.get('credit_amount', 0))
             # 移除 id 字段，让数据库自动生成
             if 'id' in record:
                 del record['id']
@@ -204,11 +205,12 @@ def saveGeneralLedger(df: pd.DataFrame) -> None:
         data = df.to_dict('records')
         for record in data:
             record['user_id'] = user_id
-            # 确保金额字段是整数类型，避免数据库类型错误
+            # 确保金额字段是正确的数值类型（支持小数）
+            # 数据库字段类型是 DECIMAL(15,2)，需要保留小数精度
             if 'debit_amount' in record:
-                record['debit_amount'] = int(float(record.get('debit_amount', 0)))
+                record['debit_amount'] = float(record.get('debit_amount', 0))
             if 'credit_amount' in record:
-                record['credit_amount'] = int(float(record.get('credit_amount', 0)))
+                record['credit_amount'] = float(record.get('credit_amount', 0))
             # 移除 id 字段，让数据库自动生成
             if 'id' in record:
                 del record['id']
