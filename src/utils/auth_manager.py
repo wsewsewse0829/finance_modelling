@@ -1,15 +1,15 @@
 """
 认证管理模块
 处理用户登录、注册、登出等认证相关功能
+使用官方 Supabase Python SDK
 """
 
 import os
-import requests
 import streamlit as st
+from supabase import create_client
 from typing import Optional, Dict, Any
 
 # 从环境变量或 Streamlit secrets 获取 Supabase 凭证
-# 本地开发环境使用环境变量，Streamlit Cloud 使用 secrets
 def _get_supabase_credentials():
     """获取 Supabase 凭证"""
     # 尝试从环境变量获取
@@ -30,50 +30,21 @@ def _get_supabase_credentials():
     return url, key
 
 
-def _make_auth_request(method: str, endpoint: str, data: Dict[str, Any] = None, headers: Dict[str, str] = None) -> Dict[str, Any]:
-    """发送认证请求到 Supabase API"""
-    url, key = _get_supabase_credentials()
-    
-    if not url or not key:
-        raise Exception("Supabase 凭证未配置")
-    
-    auth_url = f"{url}{endpoint}"
-    
-    # 默认请求头
-    # Supabase 登录端点需要同时提供 apikey 和 Authorization header
-    default_headers = {
-        "apikey": key,
-        "Authorization": f"Bearer {key}",
-        "Content-Type": "application/json"
-    }
-    
-    # 合并自定义请求头
-    if headers:
-        default_headers.update(headers)
-    
-    try:
-        if method == "GET":
-            response = requests.get(auth_url, headers=default_headers)
-        elif method == "POST":
-            response = requests.post(auth_url, headers=default_headers, json=data)
-        elif method == "DELETE":
-            response = requests.delete(auth_url, headers=default_headers)
-        else:
-            raise Exception(f"不支持的 HTTP 方法: {method}")
-        
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        error_detail = ""
-        if hasattr(e.response, 'json'):
-            try:
-                error_json = e.response.json()
-                error_detail = error_json.get('message', str(e))
-            except:
-                error_detail = str(e)
-        else:
-            error_detail = str(e)
-        raise Exception(error_detail)
+# 创建全局 Supabase 客户端（使用官方 SDK）
+_supabase_client = None
+
+def _get_supabase_client():
+    """获取 Supabase 客户端（延迟初始化）"""
+    global _supabase_client
+    if _supabase_client is None:
+        url, key = _get_supabase_credentials()
+        if not url or not key:
+            raise Exception("Supabase 凭证未配置")
+        try:
+            _supabase_client = create_client(url, key)
+        except Exception as e:
+            raise Exception(f"创建 Supabase 客户端失败: {str(e)}")
+    return _supabase_client
 
 
 def get_current_user() -> Optional[dict]:
@@ -92,7 +63,7 @@ def get_current_user() -> Optional[dict]:
 
 
 def login(email: str, password: str) -> bool:
-    """用户登录
+    """用户登录（使用官方 SDK）
     
     Args:
         email: 用户邮箱
@@ -101,65 +72,48 @@ def login(email: str, password: str) -> bool:
     Returns:
         bool: 登录是否成功
     """
-    # 调试信息
-    url, key = _get_supabase_credentials()
-    st.write(f"调试: URL 是否存在: {bool(url)}")
-    st.write(f"调试: Key 是否存在: {bool(key)}")
-    
     try:
-        st.write("调试: 尝试登录（使用 REST API）...")
+        st.write("调试: 尝试登录（使用官方 SDK）...")
         
-        # 使用 Supabase REST API 进行登录
-        # 尝试使用 /auth/v1/token 端点，在 body 中包含 grant_type
-        response = _make_auth_request(
-            method="POST",
-            endpoint="/auth/v1/token",
-            data={
-                "grant_type": "password",
-                "email": email,
-                "password": password
-            }
-        )
+        # 使用官方 SDK 进行登录
+        client = _get_supabase_client()
+        response = client.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
         
         st.write(f"调试: 登录响应: {response}")
         
         # 检查响应
-        if "access_token" in response and "user" in response:
+        if response.user:
             # 保存用户信息到 session
-            st.session_state.user_id = str(response["user"]["id"])
-            st.session_state.user_email = response["user"]["email"]
-            st.session_state.access_token = response["access_token"]
+            st.session_state.user_id = str(response.user.id)
+            st.session_state.user_email = response.user.email
+            st.session_state.access_token = response.session.access_token if response.session else None
             
-            st.success(f"欢迎回来，{response['user']['email']}！")
+            st.success(f"欢迎回来，{response.user.email}！")
             return True
         else:
-            st.error("登录失败：响应格式错误")
+            st.error("登录失败：用户信息异常")
             return False
-    except requests.exceptions.HTTPError as e:
-        # 显示详细的错误信息
-        st.error(f"登录失败: HTTP {e.response.status_code} 错误")
-        try:
-            error_json = e.response.json()
-            st.write(f"调试: 错误详情: {error_json}")
-            error_msg = error_json.get('message', error_json.get('error_description', str(e)))
-            st.error(f"详细错误: {error_msg}")
-        except:
-            st.write(f"调试: 响应内容: {e.response.text}")
-            st.error(f"详细错误: {e.response.text}")
-        return False
+            
     except Exception as e:
         error_msg = str(e)
-        if "Invalid login credentials" in error_msg:
+        st.error(f"登录异常: {error_msg}")
+        
+        # 友好的错误提示
+        if "Invalid login credentials" in error_msg or "invalid login credentials" in error_msg.lower():
             st.error("登录失败：邮箱或密码错误")
         elif "Email not confirmed" in error_msg:
             st.error("登录失败：请先验证邮箱")
-        else:
-            st.error(f"登录失败: {error_msg}")
+        elif "No API key found" in error_msg or "No apikey" in error_msg:
+            st.error("登录失败：Supabase API Key 配置错误")
+        
         return False
 
 
 def register(email: str, password: str) -> bool:
-    """用户注册
+    """用户注册（使用官方 SDK）
     
     Args:
         email: 用户邮箱
@@ -169,74 +123,52 @@ def register(email: str, password: str) -> bool:
         bool: 注册是否成功
     """
     try:
-        st.write("调试: 尝试注册（使用 REST API）...")
+        st.write("调试: 尝试注册（使用官方 SDK）...")
         
-        # 使用 Supabase REST API 进行注册
-        # 根据 Supabase 文档，注册端点接受简单的 email 和 password
-        response = _make_auth_request(
-            method="POST",
-            endpoint="/auth/v1/signup",
-            data={
-                "email": email,
-                "password": password
+        # 使用官方 SDK 进行注册
+        client = _get_supabase_client()
+        response = client.auth.sign_up({
+            "email": email,
+            "password": password,
+            "options": {
+                "email_confirm": True  # 自动确认邮箱，无需邮件验证
             }
-        )
+        })
         
         st.write(f"调试: 注册响应: {response}")
         
         # 检查响应
-        # 注册成功后，Supabase 可能不返回 access_token（需要邮件确认）
-        # 但我们已经禁用了邮件验证，所以应该返回 token
-        if "access_token" in response and "user" in response:
-            st.success("🎉 注册成功！")
-            st.info("✅ 您的账户已创建，可以直接登录使用系统。")
-            return True
-        elif "user" in response:
+        if response.user:
             st.success("🎉 注册成功！")
             st.info("✅ 您的账户已创建，可以直接登录使用系统。")
             return True
         else:
-            st.error("注册失败：响应格式错误")
+            st.error("注册失败：用户信息异常")
             return False
-    except requests.exceptions.HTTPError as e:
-        error_msg = str(e)
-        # 尝试从响应中获取详细错误信息
-        if hasattr(e, 'response') and e.response is not None:
-            try:
-                error_json = e.response.json()
-                error_msg = error_json.get('message', error_msg)
-                st.error(f"注册失败: {error_msg}")
-            except:
-                st.error(f"注册失败: {error_msg}")
-        else:
-            st.error(f"注册失败: {error_msg}")
-        return False
+            
     except Exception as e:
         error_msg = str(e)
+        st.error(f"注册异常: {error_msg}")
+        
+        # 友好的错误提示
         if "User already registered" in error_msg or "duplicate" in error_msg.lower():
             st.error("注册失败：该邮箱已被注册")
         elif "Password should be at least 6 characters" in error_msg or "password" in error_msg.lower():
             st.error("注册失败：密码至少需要 6 个字符")
         elif "Unable to validate email address" in error_msg or "email" in error_msg.lower():
             st.error("注册失败：邮箱格式不正确")
-        else:
-            st.error(f"注册失败: {error_msg}")
+        elif "No API key found" in error_msg or "No apikey" in error_msg:
+            st.error("注册失败：Supabase API Key 配置错误")
+        
         return False
 
 
 def logout() -> None:
-    """用户登出"""
+    """用户登出（使用官方 SDK）"""
     try:
-        # 使用 Supabase REST API 进行登出
-        if 'access_token' in st.session_state:
-            headers = {
-                "Authorization": f"Bearer {st.session_state.access_token}"
-            }
-            _make_auth_request(
-                method="POST",
-                endpoint="/auth/v1/logout",
-                headers=headers
-            )
+        # 使用官方 SDK 进行登出
+        client = _get_supabase_client()
+        client.auth.sign_out()
         
         # 清除 session 中的用户信息
         keys_to_clear = ['user_id', 'user_email', 'access_token']
@@ -295,7 +227,7 @@ def is_authenticated() -> bool:
 
 
 def refresh_session() -> bool:
-    """刷新用户 session
+    """刷新用户 session（使用官方 SDK）
     
     Returns:
         bool: 刷新是否成功
@@ -304,18 +236,11 @@ def refresh_session() -> bool:
         if 'access_token' not in st.session_state:
             return False
         
-        headers = {
-            "Authorization": f"Bearer {st.session_state.access_token}"
-        }
+        # 使用官方 SDK 获取当前用户
+        client = _get_supabase_client()
+        user = client.auth.get_user()
         
-        # 使用 Supabase REST API 获取当前用户
-        response = _make_auth_request(
-            method="GET",
-            endpoint="/auth/v1/user",
-            headers=headers
-        )
-        
-        if response and "id" in response:
+        if user:
             return True
         return False
     except Exception:
@@ -328,6 +253,8 @@ def diagnose_supabase() -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: 诊断结果
     """
+    import requests
+    
     results = {
         "url_configured": False,
         "key_configured": False,
@@ -356,7 +283,15 @@ def diagnose_supabase() -> Dict[str, Any]:
         except Exception as e:
             results["errors"].append(f"无法访问 Supabase URL: {str(e)}")
         
-        # 3. 检查认证端点
+        # 3. 尝试使用官方 SDK 创建客户端
+        try:
+            client = create_client(url, key)
+            results["sdk_client_created"] = True
+        except Exception as e:
+            results["sdk_client_created"] = False
+            results["errors"].append(f"无法创建 SDK 客户端: {str(e)}")
+        
+        # 4. 检查认证端点
         try:
             response = requests.get(
                 f"{url}/auth/v1/user",
@@ -370,37 +305,7 @@ def diagnose_supabase() -> Dict[str, Any]:
         except Exception as e:
             results["errors"].append(f"无法访问认证端点: {str(e)}")
         
-        # 4. 检查注册端点（发送一个无效的请求）
-        try:
-            response = requests.post(
-                f"{url}/auth/v1/signup",
-                headers={
-                    "apikey": key,
-                    "Content-Type": "application/json"
-                },
-                json={},  # 空的请求体会返回 400，但说明端点可访问
-                timeout=10
-            )
-            results["signup_endpoint_accessible"] = response.status_code in [400, 422]
-        except Exception as e:
-            results["errors"].append(f"无法访问注册端点: {str(e)}")
-        
-        # 5. 检查登录端点（发送一个无效的请求）
-        try:
-            response = requests.post(
-                f"{url}/auth/v1/token",
-                headers={
-                    "apikey": key,
-                    "Content-Type": "application/json"
-                },
-                json={},  # 空的请求体会返回 400，但说明端点可访问
-                timeout=10
-            )
-            results["login_endpoint_accessible"] = response.status_code in [400, 422]
-        except Exception as e:
-            results["errors"].append(f"无法访问登录端点: {str(e)}")
-        
-        # 6. 尝试获取项目信息（检查 Key 是否有效）
+        # 5. 尝试获取项目信息（检查 Key 是否有效）
         try:
             response = requests.get(
                 f"{url}/rest/v1/",
