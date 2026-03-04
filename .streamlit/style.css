@@ -132,21 +132,34 @@
 
 /* ========== Tab 标签页样式 ========== */
 [data-testid="stTabs"] [role="tablist"] {
-    gap: 0;
+    gap: 8px;  /* 增加标签间距 */
+    padding: 8px 0;
+    background-color: transparent;
 }
 
+/* 选中标签：底部边框高亮样式 */
 [data-testid="stTabs"] [role="tab"][aria-selected="true"] {
-    background-color: #00338D;
-    color: #FFFFFF;
+    background-color: #FFFFFF;
+    color: #00338D;
     font-weight: 600;
-    border-radius: 4px 4px 0 0;
+    border: none;
+    border-bottom: 3px solid #00338D;
+    padding: 12px 20px;
+    transition: all 0.2s ease;
 }
 
+/* 未选中标签 */
 [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]) {
     background-color: #F5F7FA;
     color: #666666;
+    font-weight: 500;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
 }
 
+/* 未选中标签悬停效果 */
 [data-testid="stTabs"] [role="tab"]:hover:not([aria-selected="true"]) {
     background-color: #E8EBF0;
     color: #00338D;
