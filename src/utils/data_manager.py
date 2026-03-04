@@ -117,6 +117,11 @@ def saveAccounts(df: pd.DataFrame) -> None:
         data = df.to_dict('records')
         for record in data:
             record['user_id'] = user_id
+            # 确保金额字段是整数类型，避免数据库类型错误
+            if 'debit_amount' in record:
+                record['debit_amount'] = int(float(record.get('debit_amount', 0)))
+            if 'credit_amount' in record:
+                record['credit_amount'] = int(float(record.get('credit_amount', 0)))
         
         # 批量插入新数据（如果数据量大，可以考虑分批插入）
         if data:
@@ -196,7 +201,12 @@ def saveGeneralLedger(df: pd.DataFrame) -> None:
         data = df.to_dict('records')
         for record in data:
             record['user_id'] = user_id
-        
+            # 确保金额字段是整数类型，避免数据库类型错误
+            if 'debit_amount' in record:
+                record['debit_amount'] = int(float(record.get('debit_amount', 0)))
+            if 'credit_amount' in record:
+                record['credit_amount'] = int(float(record.get('credit_amount', 0)))
+
         # 批量插入新数据（如果数据量大，可以考虑分批插入）
         if data:
             # Supabase 的 batch insert 限制为每次 1000 条记录
