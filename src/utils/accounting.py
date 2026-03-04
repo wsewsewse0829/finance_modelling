@@ -171,24 +171,20 @@ def generateReport(
         
         # 所有者权益包括：
         # 1. 所有者权益类科目的期末余额
-        # 2. 收入科目的净额（收入增加所有者权益）
-        # 3. 费用科目的净额（费用减少所有者权益）
+        # 2. 净利润（收入贷方发生额 - 费用借方发生额）
         equity_accounts_total = period_data[period_data["account_type"] == "所有者权益"]["end_balance"].sum()
-        revenue_total = period_data[period_data["account_type"] == "收入"]["end_balance"].sum()
-        expense_total = period_data[period_data["account_type"] == "费用"]["end_balance"].sum()
+        revenue_credit_total = period_data[period_data["account_type"] == "收入"]["credit_total"].sum()
+        expense_debit_total = period_data[period_data["account_type"] == "费用"]["debit_total"].sum()
+        net_income = revenue_credit_total - expense_debit_total
         
-        # 所有者权益总计 = 所有者权益类科目 + 收入 - 费用
-        equity_total = equity_accounts_total + revenue_total - expense_total
+        # 所有者权益总计 = 所有者权益类科目 + 净利润
+        equity_total = equity_accounts_total + net_income
 
         reports.append({"item": "资产总计", "period": period, "amount": asset_total, "report_type": "资产负债表"})
         reports.append({"item": "负债总计", "period": period, "amount": liability_total, "report_type": "资产负债表"})
         reports.append({"item": "所有者权益总计", "period": period, "amount": equity_total, "report_type": "资产负债表"})
 
         # 利润表
-        revenue_credit_total = period_data[period_data["account_type"] == "收入"]["credit_total"].sum()
-        expense_debit_total = period_data[period_data["account_type"] == "费用"]["debit_total"].sum()
-        net_income = revenue_credit_total - expense_debit_total
-
         reports.append({"item": "收入合计", "period": period, "amount": revenue_credit_total, "report_type": "利润表"})
         reports.append({"item": "费用合计", "period": period, "amount": expense_debit_total, "report_type": "利润表"})
         reports.append({"item": "净利润", "period": period, "amount": net_income, "report_type": "利润表"})
