@@ -451,22 +451,36 @@ def _renderRevenueStructure(trial_balance: pd.DataFrame, periods: list) -> None:
     fig.update_traces(textposition="inside", textinfo="percent+label")
     st.plotly_chart(fig, use_container_width=True)
     
-    # 柱状图 - 多个期间时不显示数据标签，避免重叠
-    fig_bar = px.bar(
-        period_data,
-        x="account_name",
-        y="credit_total",
-        title=f"收入明细 ({', '.join(selected_periods)})",
-        color="period",  # 按期间分组显示
-        labels={"account_name": "科目名称", "credit_total": "贷方发生额", "period": "期间"},
-        barmode="group"  # 分组显示
-    )
-    
-    # 单个期间时显示数据标签，多个期间时不显示避免重叠
-    if len(selected_periods) == 1:
+    # 柱状图 - 多选期间时显示加总金额
+    if len(selected_periods) > 1:
+        # 多选期间：按科目汇总所有期间的金额
+        summary_data = period_data.groupby("account_name")["credit_total"].sum().reset_index()
+        summary_data = summary_data.sort_values("credit_total", ascending=False)
+        
+        fig_bar = px.bar(
+            summary_data,
+            x="account_name",
+            y="credit_total",
+            title=f"收入明细加总 ({', '.join(selected_periods)})",
+            labels={"account_name": "科目名称", "credit_total": "贷方发生额"},
+            text="credit_total"
+        )
         fig_bar.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+        fig_bar.update_layout(showlegend=False)  # 隐藏图例，X轴已显示科目名称
+    else:
+        # 单个期间：原来的显示方式
+        fig_bar = px.bar(
+            period_data,
+            x="account_name",
+            y="credit_total",
+            title=f"收入明细 ({', '.join(selected_periods)})",
+            color="account_code",
+            labels={"account_name": "科目名称", "credit_total": "贷方发生额"},
+            text="credit_total"
+        )
+        fig_bar.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+        fig_bar.update_layout(showlegend=False)  # 隐藏图例，X轴已显示科目名称
     
-    fig_bar.update_layout(showlegend=True)  # 显示图例，区分不同期间
     st.plotly_chart(fig_bar, use_container_width=True)
 
 
@@ -506,22 +520,36 @@ def _renderExpenseStructure(trial_balance: pd.DataFrame, periods: list) -> None:
     fig.update_traces(textposition="inside", textinfo="percent+label")
     st.plotly_chart(fig, use_container_width=True)
     
-    # 柱状图 - 多个期间时不显示数据标签，避免重叠
-    fig_bar = px.bar(
-        period_data,
-        x="account_name",
-        y="debit_total",
-        title=f"费用明细 ({', '.join(selected_periods)})",
-        color="period",  # 按期间分组显示
-        labels={"account_name": "科目名称", "debit_total": "借方发生额", "period": "期间"},
-        barmode="group"  # 分组显示
-    )
-    
-    # 单个期间时显示数据标签，多个期间时不显示避免重叠
-    if len(selected_periods) == 1:
+    # 柱状图 - 多选期间时显示加总金额
+    if len(selected_periods) > 1:
+        # 多选期间：按科目汇总所有期间的金额
+        summary_data = period_data.groupby("account_name")["debit_total"].sum().reset_index()
+        summary_data = summary_data.sort_values("debit_total", ascending=False)
+        
+        fig_bar = px.bar(
+            summary_data,
+            x="account_name",
+            y="debit_total",
+            title=f"费用明细加总 ({', '.join(selected_periods)})",
+            labels={"account_name": "科目名称", "debit_total": "借方发生额"},
+            text="debit_total"
+        )
         fig_bar.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+        fig_bar.update_layout(showlegend=False)  # 隐藏图例，X轴已显示科目名称
+    else:
+        # 单个期间：原来的显示方式
+        fig_bar = px.bar(
+            period_data,
+            x="account_name",
+            y="debit_total",
+            title=f"费用明细 ({', '.join(selected_periods)})",
+            color="account_code",
+            labels={"account_name": "科目名称", "debit_total": "借方发生额"},
+            text="debit_total"
+        )
+        fig_bar.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+        fig_bar.update_layout(showlegend=False)  # 隐藏图例，X轴已显示科目名称
     
-    fig_bar.update_layout(showlegend=True)  # 显示图例，区分不同期间
     st.plotly_chart(fig_bar, use_container_width=True)
 
 
