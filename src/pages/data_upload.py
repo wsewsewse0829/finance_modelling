@@ -50,13 +50,24 @@ def renderDataUploadPage() -> None:
 
 def _renderUploadSection() -> None:
     """渲染上传区域"""
-    st.subheader("上传序时账")
+    st.markdown("### 上传序时账")
     st.markdown("请上传 CSV 或 Excel 格式的序时账文件。")
+
+    # 上传区域卡片
+    with st.container():
+        st.markdown("""
+        <div style="text-align: center; padding: 40px; border: 2px dashed #00338D; 
+                    border-radius: 8px; background-color: #F5F7FA; margin-bottom: 20px;">
+            <p style="color: #666666; font-size: 16px;">📁 拖放文件到此处或点击选择文件</p>
+            <p style="color: #999999; font-size: 14px; margin-top: 8px;">支持 CSV 和 Excel 格式</p>
+        </div>
+        """, unsafe_allow_html=True)
 
     uploaded_file = st.file_uploader(
         "选择文件",
         type=["csv", "xlsx", "xls"],
         help="支持 CSV 和 Excel 格式",
+        label_visibility="collapsed"
     )
 
     if uploaded_file is not None:
@@ -67,16 +78,26 @@ def _renderUploadSection() -> None:
             else:
                 df = pd.read_excel(uploaded_file)
 
-            st.success(f"文件读取成功，共 {len(df)} 条记录。")
+            # 文件信息卡片
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("文件名", uploaded_file.name)
+            with col2:
+                st.metric("记录数", f"{len(df):,}")
+            with col3:
+                file_size = len(uploaded_file.getbuffer()) / 1024
+                st.metric("文件大小", f"{file_size:.2f} KB")
+
+            st.success(f"✅ 文件读取成功，共 {len(df)} 条记录。")
 
             # 显示预览
-            st.markdown("#### 数据预览")
+            st.markdown("#### 📊 数据预览")
             st.dataframe(df.head(10), use_container_width=True)
 
             # 校验列名
             missing_cols = [col for col in REQUIRED_COLUMNS if col not in df.columns]
             if missing_cols:
-                st.error(f"缺少必需列: {', '.join(missing_cols)}")
+                st.error(f"❌ 缺少必需列: {', '.join(missing_cols)}")
                 st.markdown("**必需列：** " + ", ".join(REQUIRED_COLUMNS))
                 return
 
@@ -108,28 +129,31 @@ def _renderUploadSection() -> None:
                 )
 
             # 借贷平衡校验
-            st.markdown("#### 借贷平衡校验")
+            st.markdown("#### ✅ 借贷平衡校验")
             is_balanced, errors = validateJournalEntries(df)
 
             if is_balanced:
-                st.success("✅ 所有分录借贷平衡！")
+                st.success("🎉 所有分录借贷平衡！可以继续上传。")
             else:
                 st.error("❌ 存在借贷不平衡的分录：")
                 for error in errors:
-                    st.warning(error)
+                    st.warning(f"⚠️ {error}")
 
             # 确认上传
+            st.markdown("#### 📋 选择上传模式")
             upload_mode = st.radio(
-                "上传模式",
-                ["追加到现有数据", "替换现有数据"],
+                "",
+                ["📝 追加到现有数据", "🔄 替换现有数据"],
                 horizontal=True,
+                label_visibility="collapsed"
             )
 
-            if st.button("📥 确认上传", type="primary"):
+            st.markdown("---")
+            if st.button("📥 确认上传", type="primary", use_container_width=True):
                 _processUpload(df, upload_mode)
 
         except Exception as e:
-            st.error(f"文件读取失败: {str(e)}")
+            st.error(f"❌ 文件读取失败: {str(e)}")
 
 
 def _processUpload(new_data: pd.DataFrame, upload_mode: str) -> None:
