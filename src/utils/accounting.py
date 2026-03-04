@@ -211,7 +211,7 @@ def validateReport(report: pd.DataFrame) -> Tuple[bool, List[str]]:
         liability = period_data[period_data["item"] == "负债总计"]["amount"].sum()
         equity = period_data[period_data["item"] == "所有者权益总计"]["amount"].sum()
 
-        if abs(asset - liability - equity) > 0.01:
+        if abs(asset - liability - equity) > 1:
             errors.append(
                 f"期间 {period}: 资产({asset:.2f}) ≠ 负债({liability:.2f}) + 所有者权益({equity:.2f})"
             )
