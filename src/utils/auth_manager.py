@@ -111,6 +111,7 @@ def login(email: str, password: str) -> bool:
             st.session_state.user_id = str(response.user.id)
             st.session_state.user_email = response.user.email
             st.session_state.access_token = response.session.access_token if response.session else None
+            st.session_state.refresh_token = response.session.refresh_token if response.session else None
             
             st.success(f"欢迎回来，{response.user.email}！")
             return True

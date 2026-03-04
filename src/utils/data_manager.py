@@ -33,9 +33,11 @@ def _get_supabase_client() -> Client:
     # 创建客户端
     client = create_client(url, key)
     
-    # 如果用户已登录，设置认证 token
+    # 如果用户已登录，设置认证 token（需要 access_token 和 refresh_token）
     if 'access_token' in st.session_state and st.session_state.access_token:
-        client.auth.set_session(st.session_state.access_token)
+        access_token = st.session_state.access_token
+        refresh_token = st.session_state.get('refresh_token', '')
+        client.auth.set_session(access_token, refresh_token)
     
     return client
 
