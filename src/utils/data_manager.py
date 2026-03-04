@@ -13,35 +13,34 @@ from supabase import create_client, Client
 _supabase_client = None
 
 def _get_supabase_client() -> Client:
-    """获取 Supabase 客户端（延迟初始化）"""
-    global _supabase_client
+    """获取 Supabase 客户端（使用用户认证 token）"""
+    import streamlit as st
     
-    if _supabase_client is None:
-        # 尝试从环境变量获取
-        url = os.getenv("SUPABASE_URL", "")
-        key = os.getenv("SUPABASE_KEY", "")
-        
-        # 如果环境变量中没有，尝试从 st.secrets 获取
-        if not url or not key:
-            try:
-                import streamlit as st
-                if not url:
-                    url = st.secrets.get("SUPABASE_URL", "")
-                if not key:
-                    key = st.secrets.get("SUPABASE_KEY", "")
-            except Exception:
-                # st.secrets 可能还未初始化
-                pass
-        
-        if not url or not key:
-            raise Exception("Supabase 凭证未配置")
-        
+    # 尝试从环境变量获取
+    url = os.getenv("SUPABASE_URL", "")
+    key = os.getenv("SUPABASE_KEY", "")
+    
+    # 如果环境变量中没有，尝试从 st.secrets 获取
+    if not url or not key:
         try:
-            _supabase_client = create_client(url, key)
-        except Exception as e:
-            raise Exception(f"创建 Supabase 客户端失败: {str(e)}")
+            if not url:
+                url = st.secrets.get("SUPABASE_URL", "")
+            if not key:
+                key = st.secrets.get("SUPABASE_KEY", "")
+        except Exception:
+            pass
     
-    return _supabase_client
+    if not url or not key:
+        raise Exception("Supabase 凭证未配置")
+    
+    # 创建客户端
+    client = create_client(url, key)
+    
+    # 如果用户已登录，设置认证 token
+    if 'access_token' in st.session_state and st.session_state.access_token:
+        client.auth.set_session(st.session_state.access_token)
+    
+    return client
 
 # 保留文件目录用于工作底稿文件存储
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
