@@ -9,12 +9,39 @@ import pandas as pd
 from typing import Optional
 from supabase import create_client, Client
 
-# 从环境变量或 Streamlit secrets 获取 Supabase 凭证
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+# 创建全局 Supabase 客户端（延迟初始化）
+_supabase_client = None
 
-# 创建 Supabase 客户端
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+def _get_supabase_client() -> Client:
+    """获取 Supabase 客户端（延迟初始化）"""
+    global _supabase_client
+    
+    if _supabase_client is None:
+        # 尝试从环境变量获取
+        url = os.getenv("SUPABASE_URL", "")
+        key = os.getenv("SUPABASE_KEY", "")
+        
+        # 如果环境变量中没有，尝试从 st.secrets 获取
+        if not url or not key:
+            try:
+                import streamlit as st
+                if not url:
+                    url = st.secrets.get("SUPABASE_URL", "")
+                if not key:
+                    key = st.secrets.get("SUPABASE_KEY", "")
+            except Exception:
+                # st.secrets 可能还未初始化
+                pass
+        
+        if not url or not key:
+            raise Exception("Supabase 凭证未配置")
+        
+        try:
+            _supabase_client = create_client(url, key)
+        except Exception as e:
+            raise Exception(f"创建 Supabase 客户端失败: {str(e)}")
+    
+    return _supabase_client
 
 # 保留文件目录用于工作底稿文件存储
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
@@ -54,9 +81,10 @@ def loadAccounts() -> pd.DataFrame:
     """
     try:
         user_id = _get_user_id()
+        client = _get_supabase_client()
         
         # 从 Supabase 查询用户的科目表
-        response = supabase.table('accounts').select('*').eq('user_id', user_id).execute()
+        response = client.table('accounts').select('*').eq('user_id', user_id).execute()
         
         if response.data:
             df = pd.DataFrame(response.data)
@@ -82,9 +110,10 @@ def saveAccounts(df: pd.DataFrame) -> None:
     """
     try:
         user_id = _get_user_id()
+        client = _get_supabase_client()
         
         # 删除用户的所有旧科目数据
-        supabase.table('accounts').delete().eq('user_id', user_id).execute()
+        client.table('accounts').delete().eq('user_id', user_id).execute()
         
         # 准备新数据
         data = df.to_dict('records')
@@ -93,7 +122,7 @@ def saveAccounts(df: pd.DataFrame) -> None:
         
         # 批量插入新数据（如果数据量大，可以考虑分批插入）
         if data:
-            supabase.table('accounts').insert(data).execute()
+            client.table('accounts').insert(data).execute()
             
     except Exception as e:
         raise Exception(f"保存科目表失败: {str(e)}")
@@ -110,9 +139,10 @@ def loadGeneralLedger() -> pd.DataFrame:
     """
     try:
         user_id = _get_user_id()
+        client = _get_supabase_client()
         
         # 从 Supabase 查询用户的序时账
-        response = supabase.table('general_ledger').select('*').eq('user_id', user_id).execute()
+        response = client.table('general_ledger').select('*').eq('user_id', user_id).execute()
         
         if response.data:
             df = pd.DataFrame(response.data)
@@ -159,9 +189,10 @@ def saveGeneralLedger(df: pd.DataFrame) -> None:
     """
     try:
         user_id = _get_user_id()
+        client = _get_supabase_client()
         
         # 删除用户的所有旧序时账数据
-        supabase.table('general_ledger').delete().eq('user_id', user_id).execute()
+        client.table('general_ledger').delete().eq('user_id', user_id).execute()
         
         # 准备新数据
         data = df.to_dict('records')
@@ -174,7 +205,7 @@ def saveGeneralLedger(df: pd.DataFrame) -> None:
             batch_size = 1000
             for i in range(0, len(data), batch_size):
                 batch = data[i:i + batch_size]
-                supabase.table('general_ledger').insert(batch).execute()
+                client.table('general_ledger').insert(batch).execute()
             
     except Exception as e:
         raise Exception(f"保存序时账失败: {str(e)}")
@@ -192,9 +223,10 @@ def getWorkingPapersList() -> pd.DataFrame:
     """
     try:
         user_id = _get_user_id()
+        client = _get_supabase_client()
         
         # 从 Supabase 查询用户的工作底稿
-        response = supabase.table('working_papers').select('*').eq('user_id', user_id).execute()
+        response = client.table('working_papers').select('*').eq('user_id', user_id).execute()
         
         if response.data:
             df = pd.DataFrame(response.data)
@@ -222,6 +254,7 @@ def saveWorkingPaper(filename: str, upload_date: str, file_size: int) -> None:
     """
     try:
         user_id = _get_user_id()
+        client = _get_supabase_client()
         
         # 插入新记录
         data = {
@@ -231,7 +264,7 @@ def saveWorkingPaper(filename: str, upload_date: str, file_size: int) -> None:
             "file_size": file_size
         }
         
-        supabase.table('working_papers').insert(data).execute()
+        client.table('working_papers').insert(data).execute()
             
     except Exception as e:
         raise Exception(f"保存工作底稿元数据失败: {str(e)}")
@@ -251,6 +284,7 @@ def deleteWorkingPaper(filename: str) -> bool:
     """
     try:
         user_id = _get_user_id()
+        client = _get_supabase_client()
         
         # 删除文件
         file_path = os.path.join(WORKING_PAPERS_DIR, filename)
@@ -258,7 +292,7 @@ def deleteWorkingPaper(filename: str) -> bool:
             os.remove(file_path)
         
         # 从 Supabase 删除元数据
-        response = supabase.table('working_papers').delete().eq('user_id', user_id).eq('filename', filename).execute()
+        response = client.table('working_papers').delete().eq('user_id', user_id).eq('filename', filename).execute()
         
         return True
     except Exception as e:
@@ -283,9 +317,10 @@ def saveTrialBalance(df: pd.DataFrame) -> None:
     """
     try:
         user_id = _get_user_id()
+        client = _get_supabase_client()
         
         # 删除用户的所有旧科目余额表数据
-        supabase.table('trial_balance').delete().eq('user_id', user_id).execute()
+        client.table('trial_balance').delete().eq('user_id', user_id).execute()
         
         # 准备新数据
         data = df.to_dict('records')
@@ -297,7 +332,7 @@ def saveTrialBalance(df: pd.DataFrame) -> None:
             batch_size = 1000
             for i in range(0, len(data), batch_size):
                 batch = data[i:i + batch_size]
-                supabase.table('trial_balance').insert(batch).execute()
+                client.table('trial_balance').insert(batch).execute()
             
     except Exception as e:
         raise Exception(f"保存科目余额表失败: {str(e)}")
@@ -314,9 +349,10 @@ def saveReport(df: pd.DataFrame) -> None:
     """
     try:
         user_id = _get_user_id()
+        client = _get_supabase_client()
         
         # 删除用户的所有旧会计报表数据
-        supabase.table('reports').delete().eq('user_id', user_id).execute()
+        client.table('reports').delete().eq('user_id', user_id).execute()
         
         # 准备新数据
         data = df.to_dict('records')
@@ -328,7 +364,7 @@ def saveReport(df: pd.DataFrame) -> None:
             batch_size = 1000
             for i in range(0, len(data), batch_size):
                 batch = data[i:i + batch_size]
-                supabase.table('reports').insert(batch).execute()
+                client.table('reports').insert(batch).execute()
             
     except Exception as e:
         raise Exception(f"保存会计报表失败: {str(e)}")
