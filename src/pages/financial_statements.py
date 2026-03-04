@@ -145,7 +145,15 @@ def _renderBalanceSheet(trial_balance: pd.DataFrame, periods: list) -> None:
         
         asset_total = period_data[period_data["account_type"] == "资产"]["end_balance"].sum()
         liability_total = period_data[period_data["account_type"] == "负债"]["end_balance"].sum()
-        equity_total = period_data[period_data["account_type"] == "所有者权益"]["end_balance"].sum()
+        
+        # 所有者权益包括：
+        # 1. 所有者权益类科目的期末余额
+        # 2. 收入科目的净额（收入增加所有者权益）
+        # 3. 费用科目的净额（费用减少所有者权益）
+        equity_accounts_total = period_data[period_data["account_type"] == "所有者权益"]["end_balance"].sum()
+        revenue_total = period_data[period_data["account_type"] == "收入"]["end_balance"].sum()
+        expense_total = period_data[period_data["account_type"] == "费用"]["end_balance"].sum()
+        equity_total = equity_accounts_total + revenue_total - expense_total
         
         summary_data.append({
             "科目名称": "资产总计",

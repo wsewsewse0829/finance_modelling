@@ -292,22 +292,33 @@ def _createBalanceSheetSummary(
     budget_tb: pd.DataFrame,
     periods: list
 ) -> pd.DataFrame:
-    """创建资产负债表汇总 - 显示实际|预算|预实差异三列"""
-    # 汇总所有期间的实际数据
-    if not actual_tb.empty:
-        asset_actual = actual_tb[actual_tb["account_type"] == "资产"]["end_balance"].sum()
-        liability_actual = actual_tb[actual_tb["account_type"] == "负债"]["end_balance"].sum()
-        equity_actual = actual_tb[actual_tb["account_type"] == "所有者权益"]["end_balance"].sum()
+    """创建资产负债表汇总 - 显示实际|预算|预实差异三列
+    
+    取数逻辑：取选中期间中最后一个期间的期末余额
+    """
+    # 获取最后一个期间
+    if periods:
+        last_period = periods[-1]
+    else:
+        last_period = None
+
+    # 获取最后一个期间的实际数据
+    if not actual_tb.empty and last_period:
+        actual_period_data = actual_tb[actual_tb["period"] == last_period]
+        asset_actual = actual_period_data[actual_period_data["account_type"] == "资产"]["end_balance"].sum()
+        liability_actual = actual_period_data[actual_period_data["account_type"] == "负债"]["end_balance"].sum()
+        equity_actual = actual_period_data[actual_period_data["account_type"] == "所有者权益"]["end_balance"].sum()
     else:
         asset_actual = 0
         liability_actual = 0
         equity_actual = 0
 
-    # 汇总所有期间的预算数据
-    if not budget_tb.empty:
-        asset_budget = budget_tb[budget_tb["account_type"] == "资产"]["end_balance"].sum()
-        liability_budget = budget_tb[budget_tb["account_type"] == "负债"]["end_balance"].sum()
-        equity_budget = budget_tb[budget_tb["account_type"] == "所有者权益"]["end_balance"].sum()
+    # 获取最后一个期间的预算数据
+    if not budget_tb.empty and last_period:
+        budget_period_data = budget_tb[budget_tb["period"] == last_period]
+        asset_budget = budget_period_data[budget_period_data["account_type"] == "资产"]["end_balance"].sum()
+        liability_budget = budget_period_data[budget_period_data["account_type"] == "负债"]["end_balance"].sum()
+        equity_budget = budget_period_data[budget_period_data["account_type"] == "所有者权益"]["end_balance"].sum()
     else:
         asset_budget = 0
         liability_budget = 0
