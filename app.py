@@ -53,6 +53,10 @@ st.set_page_config(
 
 def main():
     """主函数 - 应用路由控制"""
+    
+    # 注入自定义CSS样式
+    with open(".streamlit/style.css", encoding="utf-8") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
     # 检查用户是否已登录
     if not check_auth():

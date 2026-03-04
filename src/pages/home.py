@@ -11,74 +11,108 @@ def renderHomePage() -> None:
     st.title("💰 个人财务规划应用")
     st.markdown("---")
 
-    st.markdown("""
-    ### 欢迎使用个人财务规划应用！
-
-    本应用采用 **企业财务管理的思维** 来管理个人财务，帮助您做好个人的财务规划。
-    同时也可以用于上市公司财报的简单分析。
-
-    #### 🆕 最新功能：预实分析
-    - 对比实际数据与预算数据
-    - 多期间数据自动汇总
-    - 清晰的差异分析报表
-    - 可视化图表展示
-    """)
+    # 欢迎卡片
+    with st.container():
+        st.markdown("""
+        <div class="stCard">
+            <h2>欢迎使用个人财务规划应用！</h2>
+            <p>本应用采用 <strong>企业财务管理的思维</strong> 来管理个人财务，帮助您做好个人的财务规划。
+            同时也可以用于上市公司财报的简单分析。</p>
+            <div style="margin-top: 16px; padding: 12px; background-color: #E3F2FD; border-left: 4px solid #2196F3; border-radius: 4px;">
+                <strong>🆕 最新功能：预实分析</strong><br>
+                • 对比实际数据与预算数据<br>
+                • 多期间数据自动汇总<br>
+                • 清晰的差异分析报表<br>
+                • 可视化图表展示
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # 功能介绍卡片
     col1, col2 = st.columns(2)
 
     with col1:
+        # 会计报表卡片
         st.markdown("""
-        #### 📊 会计报表
-        - 资产负债表
-        - 利润表
-        - 多期间对比展示
-        - 可视化图表分析
-        - 默认显示全部期间
-        """)
+        <div class="stCard">
+            <h3>📊 会计报表</h3>
+            <ul style="margin-left: 20px; color: #666666;">
+                <li>资产负债表</li>
+                <li>利润表</li>
+                <li>多期间对比展示</li>
+                <li>可视化图表分析</li>
+                <li>默认显示全部期间</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
+        # 预实分析卡片
         st.markdown("""
-        #### 📈 预实分析
-        - 资产负债表预实对比
-        - 利润表预实对比
-        - 预实差异可视化分析
-        - 多期间数据汇总
-        - 实际|预算|预实差异三列展示
-        """)
+        <div class="stCard">
+            <h3>📈 预实分析</h3>
+            <ul style="margin-left: 20px; color: #666666;">
+                <li>资产负债表预实对比</li>
+                <li>利润表预实对比</li>
+                <li>预实差异可视化分析</li>
+                <li>多期间数据汇总</li>
+                <li>实际|预算|预实差异三列展示</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
+        # 科目管理卡片
         st.markdown("""
-        #### 📋 科目管理
-        - 预设标准科目体系
-        - 自定义次级科目
-        - 科目类型管理
-        - 科目编码体系
-        """)
+        <div class="stCard">
+            <h3>📋 科目管理</h3>
+            <ul style="margin-left: 20px; color: #666666;">
+                <li>预设标准科目体系</li>
+                <li>自定义次级科目</li>
+                <li>科目类型管理</li>
+                <li>科目编码体系</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
     with col2:
+        # 数据上传卡片
         st.markdown("""
-        #### 📤 数据上传
-        - 批量上传序时账
-        - 支持 CSV/Excel 格式
-        - 自动借贷平衡校验
-        - 自动生成科目余额表
-        - 支持实际/预算数据分类
-        """)
+        <div class="stCard">
+            <h3>📤 数据上传</h3>
+            <ul style="margin-left: 20px; color: #666666;">
+                <li>批量上传序时账</li>
+                <li>支持 CSV/Excel 格式</li>
+                <li>自动借贷平衡校验</li>
+                <li>自动生成科目余额表</li>
+                <li>支持实际/预算数据分类</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
+        # 自动校验卡片
         st.markdown("""
-        #### 🔍 自动校验
-        - 序时账借贷平衡校验
-        - 会计报表平衡校验
-        - 数据完整性检查
-        - 错误提示与修正建议
-        """)
+        <div class="stCard">
+            <h3>🔍 自动校验</h3>
+            <ul style="margin-left: 20px; color: #666666;">
+                <li>序时账借贷平衡校验</li>
+                <li>会计报表平衡校验</li>
+                <li>数据完整性检查</li>
+                <li>错误提示与修正建议</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
+        # 可视化图表卡片
         st.markdown("""
-        #### 📉 可视化图表
-        - 资产/负债/权益结构分析
-        - 收入/费用结构分析
-        - 科目趋势分析
-        - 预实差异分析图表
-        """)
+        <div class="stCard">
+            <h3>📉 可视化图表</h3>
+            <ul style="margin-left: 20px; color: #666666;">
+                <li>资产/负债/权益结构分析</li>
+                <li>收入/费用结构分析</li>
+                <li>科目趋势分析</li>
+                <li>预实差异分析图表</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("---")
 

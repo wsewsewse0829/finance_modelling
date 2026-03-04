@@ -1,0 +1,285 @@
+/* KPMG 风格全局样式 */
+
+/* ========== 卡片容器样式 ========== */
+.stCard {
+    background-color: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 51, 141, 0.08);
+    margin-bottom: 20px;
+}
+
+.stCard:hover {
+    box-shadow: 0 4px 12px rgba(0, 51, 141, 0.12);
+}
+
+/* ========== 按钮样式 ========== */
+.stButton > button {
+    background-color: #00338D;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 24px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 51, 141, 0.2);
+}
+
+.stButton > button:hover {
+    background-color: #002870;
+    box-shadow: 0 4px 8px rgba(0, 51, 141, 0.3);
+}
+
+.stButton > button:active {
+    transform: translateY(1px);
+}
+
+.stButton > button[kind="secondary"] {
+    background-color: #F5F7FA;
+    color: #00338D;
+}
+
+.stButton > button[kind="secondary"]:hover {
+    background-color: #E8EBF0;
+}
+
+/* ========== 输入框样式 ========== */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea,
+.stSelectbox > div > div > select {
+    border: 1px solid #D0D0D0;
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus,
+.stSelectbox > div > div > select:focus {
+    border-color: #00338D;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 51, 141, 0.1);
+}
+
+/* ========== 数据表格样式 ========== */
+[data-testid="stDataFrame"] {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 51, 141, 0.08);
+}
+
+[data-testid="stDataFrame"] table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+[data-testid="stDataFrame"] thead th {
+    background-color: #00338D;
+    color: #FFFFFF;
+    font-weight: 600;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 14px;
+}
+
+[data-testid="stDataFrame"] tbody tr:nth-child(even) {
+    background-color: #F8F9FA;
+}
+
+[data-testid="stDataFrame"] tbody tr:hover {
+    background-color: #E8EBF0;
+    transition: background-color 0.2s ease;
+}
+
+[data-testid="stDataFrame"] tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #E0E0E0;
+    font-size: 13px;
+}
+
+/* ========== Metric 卡片样式 ========== */
+[data-testid="stMetricValue"] {
+    color: #00338D;
+    font-size: 28px;
+    font-weight: 700;
+}
+
+[data-testid="stMetricLabel"] {
+    color: #666666;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* ========== Expander 组件样式 ========== */
+.streamlit-expanderHeader {
+    background-color: #F5F7FA;
+    border-radius: 4px;
+    padding: 12px 16px;
+    font-weight: 600;
+    color: #00338D;
+    border: 1px solid #E0E0E0;
+}
+
+.streamlit-expanderContent {
+    background-color: #FFFFFF;
+    padding: 16px;
+    border: 1px solid #E0E0E0;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+}
+
+/* ========== Tab 标签页样式 ========== */
+[data-testid="stTabs"] [role="tablist"] {
+    gap: 0;
+}
+
+[data-testid="stTabs"] [role="tab"][aria-selected="true"] {
+    background-color: #00338D;
+    color: #FFFFFF;
+    font-weight: 600;
+    border-radius: 4px 4px 0 0;
+}
+
+[data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]) {
+    background-color: #F5F7FA;
+    color: #666666;
+}
+
+[data-testid="stTabs"] [role="tab"]:hover:not([aria-selected="true"]) {
+    background-color: #E8EBF0;
+    color: #00338D;
+}
+
+/* ========== 信息提示框样式 ========== */
+.stAlert {
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+    border-left: 4px solid;
+}
+
+.stAlert [data-testid="stMarkdownContainer"] {
+    font-size: 14px;
+}
+
+/* 成功提示 */
+.stAlert[role="alert"] {
+    background-color: #E8F5E9;
+    border-color: #4CAF50;
+    color: #2E7D32;
+}
+
+/* 错误提示 */
+.stAlert[role="alertdanger"] {
+    background-color: #FFEBEE;
+    border-color: #F44336;
+    color: #C62828;
+}
+
+/* 警告提示 */
+.stAlert[role="alertwarning"] {
+    background-color: #FFF3E0;
+    border-color: #FF9800;
+    color: #EF6C00;
+}
+
+/* 信息提示 */
+.stAlert[role="alertinfo"] {
+    background-color: #E3F2FD;
+    border-color: #2196F3;
+    color: #1565C0;
+}
+
+/* ========== 进度条样式 ========== */
+.stProgress > div > div > div > div {
+    background-color: #00338D;
+}
+
+/* ========== 侧边栏样式 ========== 
+[data-testid="stSidebar"] {
+    background-color: #F5F7FA;
+}
+
+[data-testid="stSidebar"] [role="img"] {
+    max-width: 80%;
+}
+
+/* ========== 标题样式 ========== */
+h1 {
+    color: #00338D !important;
+    font-weight: 700;
+    margin-bottom: 24px;
+}
+
+h2 {
+    color: #00338D !important;
+    font-weight: 600;
+    margin-top: 24px;
+    margin-bottom: 16px;
+}
+
+h3 {
+    color: #1A1A1A !important;
+    font-weight: 600;
+    margin-top: 20px;
+    margin-bottom: 12px;
+}
+
+/* ========== 分隔线样式 ========== */
+hr {
+    border: none;
+    border-top: 2px solid #E0E0E0;
+    margin: 24px 0;
+}
+
+/* ========== 上传区域样式 ========== */
+[data-testid="stFileUploader"] {
+    border: 2px dashed #00338D;
+    border-radius: 8px;
+    padding: 40px;
+    background-color: #F5F7FA;
+    transition: all 0.3s ease;
+}
+
+[data-testid="stFileUploader"]:hover {
+    background-color: #E8EBF0;
+    border-color: #002870;
+}
+
+/* ========== 滚动条样式 ========== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #F5F7FA;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #00338D;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #002870;
+}
+
+/* ========== 工具提示样式 ========== */
+.tooltip {
+    background-color: #00338D;
+    color: #FFFFFF;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ========== 加载动画优化 ========== 
+[aria-busy="true"] {
+    opacity: 0.6;
+    pointer-events: none;
+}
+*/
