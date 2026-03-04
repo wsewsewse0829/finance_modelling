@@ -38,12 +38,33 @@ def _get_supabase_client():
     global _supabase_client
     if _supabase_client is None:
         url, key = _get_supabase_credentials()
+        
+        st.write(f"调试: URL = {url[:20]}..." if url else "调试: URL = None")
+        st.write(f"调试: Key = {key[:20]}..." if key else "调试: Key = None")
+        
         if not url or not key:
             raise Exception("Supabase 凭证未配置")
+        
         try:
             _supabase_client = create_client(url, key)
+            
+            # 验证客户端是否正确创建
+            if _supabase_client is None:
+                raise Exception("create_client 返回了 None")
+            
+            if _supabase_client.auth is None:
+                raise Exception("client.auth 为 None，认证模块未正确初始化")
+            
+            st.write("调试: Supabase 客户端创建成功")
+            
         except Exception as e:
+            st.write(f"调试: 创建客户端失败: {str(e)}")
             raise Exception(f"创建 Supabase 客户端失败: {str(e)}")
+    
+    # 再次验证客户端和 auth
+    if _supabase_client is None or _supabase_client.auth is None:
+        raise Exception("Supabase 客户端或认证模块未正确初始化")
+    
     return _supabase_client
 
 
