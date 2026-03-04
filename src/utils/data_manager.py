@@ -9,9 +9,6 @@ import pandas as pd
 from typing import Optional
 from supabase import create_client, Client
 
-# 创建全局 Supabase 客户端（延迟初始化）
-_supabase_client = None
-
 def _get_supabase_client() -> Client:
     """获取 Supabase 客户端（使用用户认证 token）"""
     import streamlit as st
