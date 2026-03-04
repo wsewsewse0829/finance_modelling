@@ -343,10 +343,10 @@ def _renderAssetStructure(trial_balance: pd.DataFrame, periods: list) -> None:
         title=f"资产明细 ({selected_period})",
         color="account_code",
         labels={"account_name": "科目名称", "end_balance": "期末余额"},
-        text="end_balance",
-        showlegend=False  # 隐藏图例，X轴已显示科目名称
+        text="end_balance"
     )
     fig_bar.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+    fig_bar.update_layout(showlegend=False)  # 隐藏图例，X轴已显示科目名称
     st.plotly_chart(fig_bar, use_container_width=True)
 
 
@@ -408,10 +408,10 @@ def _renderEquityStructure(trial_balance: pd.DataFrame, periods: list) -> None:
         title=f"所有者权益明细 ({selected_period})",
         color="account_code",
         labels={"account_name": "科目名称", "end_balance": "期末余额"},
-        text="end_balance",
-        showlegend=False  # 隐藏图例，X轴已显示科目名称
+        text="end_balance"
     )
     fig.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+    fig.update_layout(showlegend=False)  # 隐藏图例，X轴已显示科目名称
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -454,10 +454,10 @@ def _renderRevenueStructure(trial_balance: pd.DataFrame, periods: list) -> None:
         title=f"收入明细 ({selected_period})",
         color="account_code",
         labels={"account_name": "科目名称", "credit_total": "贷方发生额"},
-        text="credit_total",
-        showlegend=False  # 隐藏图例，X轴已显示科目名称
+        text="credit_total"
     )
     fig_bar.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+    fig_bar.update_layout(showlegend=False)  # 隐藏图例，X轴已显示科目名称
     st.plotly_chart(fig_bar, use_container_width=True)
 
 
@@ -500,10 +500,10 @@ def _renderExpenseStructure(trial_balance: pd.DataFrame, periods: list) -> None:
         title=f"费用明细 ({selected_period})",
         color="account_code",
         labels={"account_name": "科目名称", "debit_total": "借方发生额"},
-        text="debit_total",
-        showlegend=False  # 隐藏图例，X轴已显示科目名称
+        text="debit_total"
     )
     fig_bar.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+    fig_bar.update_layout(showlegend=False)  # 隐藏图例，X轴已显示科目名称
     st.plotly_chart(fig_bar, use_container_width=True)
 
 
