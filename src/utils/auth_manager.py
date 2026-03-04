@@ -40,8 +40,10 @@ def _make_auth_request(method: str, endpoint: str, data: Dict[str, Any] = None, 
     auth_url = f"{url}{endpoint}"
     
     # 默认请求头
+    # Supabase 登录端点需要同时提供 apikey 和 Authorization header
     default_headers = {
         "apikey": key,
+        "Authorization": f"Bearer {key}",
         "Content-Type": "application/json"
     }
     
