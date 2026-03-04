@@ -425,21 +425,26 @@ def _renderRevenueStructure(trial_balance: pd.DataFrame, periods: list) -> None:
         st.info("暂无收入数据。")
         return
     
-    selected_period = st.selectbox("选择期间", periods)
-    period_data = revenue_data[revenue_data["period"] == selected_period]
+    selected_periods = st.multiselect("选择期间", periods, default=periods[:1])
     
-    if period_data.empty:
-        st.info("该期间无收入数据。")
+    if not selected_periods:
+        st.info("请至少选择一个期间。")
         return
     
-    period_data = period_data.sort_values("account_code")
+    period_data = revenue_data[revenue_data["period"].isin(selected_periods)]
+    
+    if period_data.empty:
+        st.info("所选期间无收入数据。")
+        return
+    
+    period_data = period_data.sort_values(["period", "account_code"])
     
     # 饼图 - 按贷方发生额
     fig = px.pie(
         period_data,
         values="credit_total",
         names="account_name",
-        title=f"收入结构分析 ({selected_period})",
+        title=f"收入结构分析 ({', '.join(selected_periods)})",
         hover_data=["account_code", "credit_total"],
         labels={"account_name": "科目名称", "credit_total": "贷方发生额"}
     )
@@ -451,7 +456,7 @@ def _renderRevenueStructure(trial_balance: pd.DataFrame, periods: list) -> None:
         period_data,
         x="account_name",
         y="credit_total",
-        title=f"收入明细 ({selected_period})",
+        title=f"收入明细 ({', '.join(selected_periods)})",
         color="account_code",
         labels={"account_name": "科目名称", "credit_total": "贷方发生额"},
         text="credit_total"
@@ -471,21 +476,26 @@ def _renderExpenseStructure(trial_balance: pd.DataFrame, periods: list) -> None:
         st.info("暂无费用数据。")
         return
     
-    selected_period = st.selectbox("选择期间", periods)
-    period_data = expense_data[expense_data["period"] == selected_period]
+    selected_periods = st.multiselect("选择期间", periods, default=periods[:1])
     
-    if period_data.empty:
-        st.info("该期间无费用数据。")
+    if not selected_periods:
+        st.info("请至少选择一个期间。")
         return
     
-    period_data = period_data.sort_values("account_code")
+    period_data = expense_data[expense_data["period"].isin(selected_periods)]
+    
+    if period_data.empty:
+        st.info("所选期间无费用数据。")
+        return
+    
+    period_data = period_data.sort_values(["period", "account_code"])
     
     # 饼图 - 按借方发生额
     fig = px.pie(
         period_data,
         values="debit_total",
         names="account_name",
-        title=f"费用结构分析 ({selected_period})",
+        title=f"费用结构分析 ({', '.join(selected_periods)})",
         hover_data=["account_code", "debit_total"],
         labels={"account_name": "科目名称", "debit_total": "借方发生额"}
     )
@@ -497,7 +507,7 @@ def _renderExpenseStructure(trial_balance: pd.DataFrame, periods: list) -> None:
         period_data,
         x="account_name",
         y="debit_total",
-        title=f"费用明细 ({selected_period})",
+        title=f"费用明细 ({', '.join(selected_periods)})",
         color="account_code",
         labels={"account_name": "科目名称", "debit_total": "借方发生额"},
         text="debit_total"

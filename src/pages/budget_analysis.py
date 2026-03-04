@@ -686,17 +686,21 @@ def _renderIncomeStatementComparisonChart(
     try:
 
         # 选择期间
-        selected_period = st.selectbox("选择期间", periods)
+        selected_periods = st.multiselect("选择期间", periods, default=periods[:1])
         account_type_filter = st.selectbox("选择科目类型", ["收入", "费用"])
 
         # 确定使用的列
         value_column = "credit_total" if account_type_filter == "收入" else "debit_total"
         y_title = "贷方发生额" if account_type_filter == "收入" else "借方发生额"
 
+        if not selected_periods:
+            st.info("请至少选择一个期间。")
+            return
+
         # 获取数据
         if not actual_tb.empty and "period" in actual_tb.columns and "account_type" in actual_tb.columns:
             actual_data = actual_tb[
-                (actual_tb["period"] == selected_period) &
+                (actual_tb["period"].isin(selected_periods)) &
                 (actual_tb["account_type"] == account_type_filter)
             ].copy()
         else:
@@ -704,14 +708,14 @@ def _renderIncomeStatementComparisonChart(
 
         if not budget_tb.empty and "period" in budget_tb.columns and "account_type" in budget_tb.columns:
             budget_data = budget_tb[
-                (budget_tb["period"] == selected_period) &
+                (budget_tb["period"].isin(selected_periods)) &
                 (budget_tb["account_type"] == account_type_filter)
             ].copy()
         else:
             budget_data = pd.DataFrame()
 
         if actual_data.empty and budget_data.empty:
-            st.info(f"该期间无{account_type_filter}数据。")
+            st.info(f"所选期间无{account_type_filter}数据。")
             return
 
         # 创建对比图
@@ -747,7 +751,7 @@ def _renderIncomeStatementComparisonChart(
 
         fig.update_layout(
             barmode="group",
-            title=f"{account_type_filter} - 实际 vs 预算 ({selected_period})",
+            title=f"{account_type_filter} - 实际 vs 预算 ({', '.join(selected_periods)})",
             xaxis_title="科目名称",
             yaxis_title=y_title,
             height=500,
