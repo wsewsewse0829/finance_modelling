@@ -411,10 +411,19 @@ def _generate_base_entries(
     if not entries:
         return pd.DataFrame()
     
-    return pd.DataFrame(entries)[
+    df = pd.DataFrame(entries)
+    # 确保所有必需的列都存在
+    required_columns = [
         "entry_date", "voucher_no", "account_code", "account_name",
         "debit_amount", "credit_amount", "summary", "actual_budget"
     ]
+    
+    # 检查是否所有列都存在
+    if all(col in df.columns for col in required_columns):
+        return df[required_columns]
+    else:
+        # 如果缺少列，重新创建 DataFrame 确保列顺序正确
+        return pd.DataFrame(entries, columns=required_columns)
 
 
 def _render_entry_preview(entries: pd.DataFrame) -> None:
