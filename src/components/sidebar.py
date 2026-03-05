@@ -6,6 +6,7 @@
 import streamlit as st
 
 
+
 # 页面配置常量
 PAGE_HOME = "🏠 首页"
 PAGE_JOURNAL_ENTRY = "📝 手动录入分录"
