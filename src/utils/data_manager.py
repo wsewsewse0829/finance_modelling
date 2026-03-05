@@ -386,6 +386,111 @@ def saveReport(df: pd.DataFrame) -> None:
         raise Exception(f"保存会计报表失败: {str(e)}")
 
 
+def saveJournalTemplate(template_name: str, template_data: dict) -> None:
+    """保存当前用户的分录模板
+    
+    Args:
+        template_name: 模板名称
+        template_data: 模板数据（JSON格式）
+        
+    Raises:
+        Exception: 用户未登录或数据库操作失败
+    """
+    try:
+        user_id = _get_user_id()
+        client = _get_supabase_client()
+        
+        import json
+        data = {
+            "user_id": user_id,
+            "template_name": template_name,
+            "template_data": json.dumps(template_data, ensure_ascii=False)
+        }
+        
+        client.table('journal_templates').insert(data).execute()
+            
+    except Exception as e:
+        raise Exception(f"保存分录模板失败: {str(e)}")
+
+
+def loadJournalTemplates() -> pd.DataFrame:
+    """加载当前用户的分录模板列表
+    
+    Returns:
+        pd.DataFrame: 模板列表
+        
+    Raises:
+        Exception: 用户未登录或数据库查询失败
+    """
+    try:
+        user_id = _get_user_id()
+        client = _get_supabase_client()
+        
+        # 从 Supabase 查询用户的模板
+        response = client.table('journal_templates').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
+        
+        if response.data:
+            df = pd.DataFrame(response.data)
+            # 移除不需要显示的字段
+            columns_to_keep = ['id', 'template_name', 'created_at']
+            df = df[columns_to_keep]
+            # 重命名列为中文
+            df = df.rename(columns={'id': '模板ID', 'template_name': '模板名称', 'created_at': '创建时间'})
+            return df
+        else:
+            return pd.DataFrame(columns=['模板ID', '模板名称', '创建时间'])
+    except Exception as e:
+        raise Exception(f"加载分录模板失败: {str(e)}")
+
+
+def getJournalTemplate(template_id: int) -> dict:
+    """获取指定模板的详细数据
+    
+    Args:
+        template_id: 模板ID
+        
+    Returns:
+        dict: 模板数据
+        
+    Raises:
+        Exception: 用户未登录或数据库查询失败
+    """
+    try:
+        user_id = _get_user_id()
+        client = _get_supabase_client()
+        
+        # 从 Supabase 查询指定模板
+        response = client.table('journal_templates').select('*').eq('user_id', user_id).eq('id', template_id).execute()
+        
+        if response.data:
+            import json
+            return json.loads(response.data[0]['template_data'])
+        else:
+            raise Exception("模板不存在")
+    except Exception as e:
+        raise Exception(f"获取分录模板失败: {str(e)}")
+
+
+def deleteJournalTemplate(template_id: int) -> None:
+    """删除分录模板
+    
+    Args:
+        template_id: 模板ID
+        
+    Raises:
+        Exception: 用户未登录或数据库操作失败
+    """
+    try:
+        user_id = _get_user_id()
+        client = _get_supabase_client()
+        
+        # 从 Supabase 删除模板
+        client.table('journal_templates').delete().eq('user_id', user_id).eq('id', template_id).execute()
+            
+    except Exception as e:
+        raise Exception(f"删除分录模板失败: {str(e)}")
+
+
 def _createDefaultAccounts() -> pd.DataFrame:
     """创建默认科目表"""
     default_accounts = [
@@ -403,6 +508,7 @@ def _createDefaultAccounts() -> pd.DataFrame:
         # 所有者权益类
         {"account_code": "3001", "account_name": "实收资本", "account_type": "所有者权益", "parent_code": "", "balance_direction": "贷"},
         {"account_code": "3101", "account_name": "资本公积", "account_type": "所有者权益", "parent_code": "", "balance_direction": "贷"},
+        {"account_code": "3103", "account_name": "本年利润", "account_type": "所有者权益", "parent_code": "", "balance_direction": "贷"},
         {"account_code": "3201", "account_name": "留存收益", "account_type": "所有者权益", "parent_code": "", "balance_direction": "贷"},
         # 收入类
         {"account_code": "4001", "account_name": "工资收入", "account_type": "收入", "parent_code": "", "balance_direction": "贷"},

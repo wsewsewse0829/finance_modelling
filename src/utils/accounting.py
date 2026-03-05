@@ -217,6 +217,212 @@ def validateReport(report: pd.DataFrame) -> Tuple[bool, List[str]]:
     return is_balanced, errors
 
 
+def generateClosingStep1(
+    entries: pd.DataFrame,
+    accounts: pd.DataFrame,
+    actual_budget: str,
+    period: str,
+    date: str,
+    summary: str = "结转本期利润"
+) -> pd.DataFrame:
+    """
+    第一步结转：收入/费用 → 本年利润
+    支持多科目结转
+    
+    Args:
+        entries: 分录数据（包含 account_code, debit_amount, credit_amount, account_type）
+        accounts: 科目表
+        actual_budget: 数据类型（"实际"或"预算"）
+        period: 会计期间
+        date: 凭证日期
+        summary: 分录摘要
+        
+    Returns:
+        pd.DataFrame: 结转分录数据
+    """
+    import pandas as pd
+    from datetime import datetime
+    
+    # 合并科目类型信息
+    accounts_temp = accounts.copy()
+    accounts_temp["account_code"] = accounts_temp["account_code"].astype(str)
+    entries_temp = entries.copy()
+    entries_temp["account_code"] = entries_temp["account_code"].astype(str)
+    
+    entries_with_type = entries_temp.merge(
+        accounts_temp[["account_code", "account_name", "account_type"]],
+        on="account_code",
+        how="left"
+    )
+    
+    closing_entries = []
+    
+    # 获取下一个凭证号
+    voucher_no = _generateNextVoucherNo(period, date)
+    
+    # 处理收入类科目
+    revenue_entries = entries_with_type[entries_with_type["account_type"] == "收入"]
+    if not revenue_entries.empty:
+        for _, row in revenue_entries.iterrows():
+            if row["credit_amount"] > 0:
+                # 借：本年利润，贷：收入科目
+                closing_entries.append({
+                    "entry_date": date,
+                    "voucher_no": voucher_no,
+                    "account_code": "3103",  # 本年利润
+                    "account_name": "本年利润",
+                    "debit_amount": row["credit_amount"],
+                    "credit_amount": 0,
+                    "summary": summary,
+                    "actual_budget": actual_budget
+                })
+    
+    # 处理费用类科目
+    expense_entries = entries_with_type[entries_with_type["account_type"] == "费用"]
+    if not expense_entries.empty:
+        for _, row in expense_entries.iterrows():
+            if row["debit_amount"] > 0:
+                # 借：费用科目，贷：本年利润
+                closing_entries.append({
+                    "entry_date": date,
+                    "voucher_no": voucher_no,
+                    "account_code": row["account_code"],
+                    "account_name": row["account_name"],
+                    "debit_amount": 0,
+                    "credit_amount": row["debit_amount"],
+                    "summary": summary,
+                    "actual_budget": actual_budget
+                })
+    
+    # 如果没有需要结转的科目，返回空数据框
+    if not closing_entries:
+        return pd.DataFrame()
+    
+    # 计算本年利润的总借方和总贷方
+    closing_df = pd.DataFrame(closing_entries)
+    
+    # 确保本年利润科目有贷方余额（净利润）或借方余额（净亏损）
+    total_revenue_closing = closing_df[closing_df["account_code"] == "3103"]["debit_amount"].sum()
+    total_expense_closing = closing_df[closing_df["account_code"] != "3103"]["credit_amount"].sum()
+    net_income = total_revenue_closing - total_expense_closing
+    
+    if net_income > 0:  # 净利润，本年利润有贷方余额
+        closing_df.loc[closing_df["account_code"] == "3103", "credit_amount"] = net_income
+    elif net_income < 0:  # 净亏损，本年利润有借方余额
+        closing_df.loc[closing_df["account_code"] == "3103", "debit_amount"] = abs(net_income)
+    
+    return closing_df[["entry_date", "voucher_no", "account_code", "account_name", 
+                   "debit_amount", "credit_amount", "summary", "actual_budget"]]
+
+
+def generateClosingStep2(
+    step1_entries: pd.DataFrame,
+    actual_budget: str,
+    period: str,
+    date: str,
+    summary: str = "结转至留存收益"
+) -> pd.DataFrame:
+    """
+    第二步结转：本年利润 → 留存收益
+    
+    Args:
+        step1_entries: 第一步结转的分录数据
+        actual_budget: 数据类型（"实际"或"预算"）
+        period: 会计期间
+        date: 凭证日期
+        summary: 分录摘要
+        
+    Returns:
+        pd.DataFrame: 结转分录数据
+    """
+    import pandas as pd
+    
+    # 计算本年利润的余额
+    profit_df = step1_entries[step1_entries["account_code"] == "3103"]
+    if profit_df.empty:
+        return pd.DataFrame()
+    
+    debit_total = profit_df["debit_amount"].sum()
+    credit_total = profit_df["credit_amount"].sum()
+    net_income = credit_total - debit_total
+    
+    # 如果净利润为0，不需要结转
+    if abs(net_income) < 0.01:
+        return pd.DataFrame()
+    
+    # 获取下一个凭证号
+    voucher_no = _generateNextVoucherNo(period, date)
+    
+    # 生成结转分录
+    if net_income > 0:  # 净利润
+        closing_entries = [
+            {
+                "entry_date": date,
+                "voucher_no": voucher_no,
+                "account_code": "3103",  # 本年利润
+                "account_name": "本年利润",
+                "debit_amount": net_income,
+                "credit_amount": 0,
+                "summary": summary,
+                "actual_budget": actual_budget
+            },
+            {
+                "entry_date": date,
+                "voucher_no": voucher_no,
+                "account_code": "3201",  # 留存收益
+                "account_name": "留存收益",
+                "debit_amount": 0,
+                "credit_amount": net_income,
+                "summary": summary,
+                "actual_budget": actual_budget
+            }
+        ]
+    else:  # 净亏损
+        closing_entries = [
+            {
+                "entry_date": date,
+                "voucher_no": voucher_no,
+                "account_code": "3201",  # 留存收益
+                "account_name": "留存收益",
+                "debit_amount": abs(net_income),
+                "credit_amount": 0,
+                "summary": summary,
+                "actual_budget": actual_budget
+            },
+            {
+                "entry_date": date,
+                "voucher_no": voucher_no,
+                "account_code": "3103",  # 本年利润
+                "account_name": "本年利润",
+                "debit_amount": 0,
+                "credit_amount": abs(net_income),
+                "summary": summary,
+                "actual_budget": actual_budget
+            }
+        ]
+    
+    df = pd.DataFrame(closing_entries)
+    return df[["entry_date", "voucher_no", "account_code", "account_name", 
+               "debit_amount", "credit_amount", "summary", "actual_budget"]]
+
+
+def _generateNextVoucherNo(period: str, date: str) -> str:
+    """
+    生成下一个凭证号
+    格式：YYYY-MM-XXX
+    
+    Args:
+        period: 会计期间（如 2024-03）
+        date: 凭证日期（如 2024-03-15）
+        
+    Returns:
+        str: 凭证号
+    """
+    # 简单实现：使用日期作为基础
+    # 在实际应用中，应该查询数据库获取当前期间的最大凭证号
+    return f"{period}-001"
+
+
 def _calculateEndBalance(
     begin_balance: float,
     debit_total: float,

@@ -31,12 +31,14 @@ def _check_supabase_config():
 from src.components.sidebar import (
     renderSidebar,
     PAGE_HOME,
+    PAGE_JOURNAL_ENTRY,
     PAGE_FINANCIAL_STATEMENTS,
     PAGE_BUDGET_ANALYSIS,
     PAGE_ACCOUNT_MANAGEMENT,
     PAGE_DATA_UPLOAD,
 )
 from src.pages.home import renderHomePage
+from src.pages.journal_entry import renderJournalEntryPage
 from src.pages.financial_statements import renderFinancialStatementsPage
 from src.pages.budget_analysis import renderBudgetAnalysisPage
 from src.pages.account_management import renderAccountManagementPage
@@ -83,6 +85,8 @@ def main():
     # 根据选择的页面路由到对应的功能
     if selected_page == PAGE_HOME:
         renderHomePage()
+    elif selected_page == PAGE_JOURNAL_ENTRY:
+        renderJournalEntryPage()
     elif selected_page == PAGE_FINANCIAL_STATEMENTS:
         renderFinancialStatementsPage()
     elif selected_page == PAGE_BUDGET_ANALYSIS:
