@@ -128,6 +128,9 @@ def _render_entry_details(accounts: pd.DataFrame) -> None:
         axis=1
     ).tolist()
     
+    # 创建选项到索引的映射（更稳健的方法）
+    option_to_index = {option: idx for idx, option in enumerate(account_options)}
+    
     # 借方科目
     st.markdown("#### 借方科目")
     col_debit1, col_debit2, col_debit3 = st.columns([4, 3, 1])
@@ -144,7 +147,7 @@ def _render_entry_details(accounts: pd.DataFrame) -> None:
                 )
                 # 保存选择的科目信息
                 if selected:
-                    selected_index = account_options.index(selected)
+                    selected_index = option_to_index[selected]
                     account_info = accounts.iloc[selected_index]
                     entry["account_code"] = account_info["account_code"]
                     entry["account_name"] = account_info["account_name"]
@@ -188,7 +191,7 @@ def _render_entry_details(accounts: pd.DataFrame) -> None:
                 )
                 # 保存选择的科目信息
                 if selected:
-                    selected_index = account_options.index(selected)
+                    selected_index = option_to_index[selected]
                     account_info = accounts.iloc[selected_index]
                     entry["account_code"] = account_info["account_code"]
                     entry["account_name"] = account_info["account_name"]
