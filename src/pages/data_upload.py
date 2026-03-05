@@ -159,8 +159,10 @@ def _renderUploadSection() -> None:
 def _processUpload(new_data: pd.DataFrame, upload_mode: str) -> None:
     """处理数据上传"""
     accounts = loadAccounts()
-
-    # 合并数据（用于生成报表）
+    
+    # 确保所有情况下都有 combined 变量
+    combined = new_data  # 默认值
+    
     if upload_mode == "追加到现有数据":
         existing = loadGeneralLedger()
         combined = pd.concat([existing, new_data], ignore_index=True)
@@ -168,7 +170,6 @@ def _processUpload(new_data: pd.DataFrame, upload_mode: str) -> None:
         saveGeneralLedger(combined, replace=False)
     else:
         # 替换模式：删除旧数据
-        combined = new_data
         saveGeneralLedger(new_data, replace=True)
 
     # 自动生成科目余额表
