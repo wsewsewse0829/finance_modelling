@@ -342,7 +342,11 @@ def _render_balance_check(accounts: pd.DataFrame, closing_enabled: bool) -> pd.D
             "结转本期利润"
         )
         
+        st.write(f"调试: 第一步结转生成了 {len(step1_entries)} 条记录")
         if not step1_entries.empty:
+            st.write("调试: 第一步结转内容:")
+            st.dataframe(step1_entries)
+            
             step2_entries = generateClosingStep2(
                 step1_entries,
                 st.session_state.actual_budget,
@@ -351,11 +355,16 @@ def _render_balance_check(accounts: pd.DataFrame, closing_enabled: bool) -> pd.D
                 "结转至留存收益"
             )
             
+            st.write(f"调试: 第二步结转生成了 {len(step2_entries)} 条记录")
             if not step2_entries.empty:
+                st.write("调试: 第二步结转内容:")
+                st.dataframe(step2_entries)
                 all_entries = pd.concat([all_entries, step1_entries, step2_entries], ignore_index=True)
             else:
+                st.warning("调试: 第二步结转为空，未生成留存收益结转分录")
                 all_entries = pd.concat([all_entries, step1_entries], ignore_index=True)
         else:
+            st.warning("调试: 第一步结转为空")
             all_entries = all_entries
     
     # 显示分录预览
