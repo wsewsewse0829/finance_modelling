@@ -434,3 +434,4 @@ def _calculateEndBalance(
         return begin_balance + debit_total - credit_total
     else:
         return begin_balance - debit_total + credit_total
+
