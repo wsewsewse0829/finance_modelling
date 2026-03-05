@@ -144,10 +144,11 @@ def _render_entry_details(accounts: pd.DataFrame) -> None:
                 )
                 # 保存选择的科目信息
                 if selected:
-                    account_info = accounts.iloc[selected]
+                    selected_index = account_options.index(selected)
+                    account_info = accounts.iloc[selected_index]
                     entry["account_code"] = account_info["account_code"]
                     entry["account_name"] = account_info["account_name"]
-                    entry["account_option_index"] = selected
+                    entry["account_option_index"] = selected_index
             
             with cols[1]:
                 entry["amount"] = st.number_input(
@@ -187,10 +188,11 @@ def _render_entry_details(accounts: pd.DataFrame) -> None:
                 )
                 # 保存选择的科目信息
                 if selected:
-                    account_info = accounts.iloc[selected]
+                    selected_index = account_options.index(selected)
+                    account_info = accounts.iloc[selected_index]
                     entry["account_code"] = account_info["account_code"]
                     entry["account_name"] = account_info["account_name"]
-                    entry["account_option_index"] = selected
+                    entry["account_option_index"] = selected_index
             
             with cols[1]:
                 entry["amount"] = st.number_input(
