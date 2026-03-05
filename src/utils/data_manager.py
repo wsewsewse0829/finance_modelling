@@ -185,11 +185,12 @@ def loadGeneralLedger() -> pd.DataFrame:
         raise Exception(f"加载序时账失败: {str(e)}")
 
 
-def saveGeneralLedger(df: pd.DataFrame) -> None:
+def saveGeneralLedger(df: pd.DataFrame, replace: bool = False) -> None:
     """保存当前用户的序时账数据
     
     Args:
         df: 序时账数据
+        replace: 是否替换现有数据（True=删除旧数据，False=追加数据）
         
     Raises:
         Exception: 用户未登录或数据库操作失败
@@ -198,8 +199,9 @@ def saveGeneralLedger(df: pd.DataFrame) -> None:
         user_id = _get_user_id()
         client = _get_supabase_client()
         
-        # 删除用户的所有旧序时账数据
-        client.table('general_ledger').delete().eq('user_id', user_id).execute()
+        # 如果是替换模式，删除用户的所有旧序时账数据
+        if replace:
+            client.table('general_ledger').delete().eq('user_id', user_id).execute()
         
         # 准备新数据
         data = df.to_dict('records')
