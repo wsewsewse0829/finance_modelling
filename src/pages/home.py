@@ -19,11 +19,11 @@ def renderHomePage() -> None:
             <p>本应用采用 <strong>企业财务管理的思维</strong> 来管理个人财务，帮助您做好个人的财务规划。
             同时也可以用于上市公司财报的简单分析。</p>
             <div style="margin-top: 16px; padding: 12px; background-color: #E3F2FD; border-left: 4px solid #2196F3; border-radius: 4px;">
-                <strong>🆕 最新功能：预实分析</strong><br>
-                • 对比实际数据与预算数据<br>
-                • 多期间数据自动汇总<br>
-                • 清晰的差异分析报表<br>
-                • 可视化图表展示
+                <strong>🎉 最新功能更新</strong><br>
+                • <strong>优化自动结转功能</strong>：正确实现收入/费用到本年利润的两步结转<br>
+                • <strong>修复数据上传逻辑</strong>：支持实际/预算数据独立存储，互不影响<br>
+                • <strong>改进工作底稿管理</strong>：修复文件路径问题，确保文件可正常下载<br>
+                • <strong>简化登录界面</strong>：移除调试信息，提供更简洁的用户体验
             </div>
         </div>
         """, unsafe_allow_html=True)

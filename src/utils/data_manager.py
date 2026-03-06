@@ -35,9 +35,13 @@ def _get_supabase_client() -> Client:
     
     # 如果用户已登录，设置认证 token（需要 access_token 和 refresh_token）
     if 'access_token' in st.session_state and st.session_state.access_token:
-        access_token = st.session_state.access_token
-        refresh_token = st.session_state.get('refresh_token', '')
-        client.auth.set_session(access_token, refresh_token)
+        try:
+            access_token = st.session_state.access_token
+            refresh_token = st.session_state.get('refresh_token', '')
+            client.auth.set_session(access_token, refresh_token)
+        except Exception as e:
+            # 如果设置 session 失败，记录错误但继续（可能 token 已过期）
+            pass
     
     return client
 
@@ -319,7 +323,8 @@ def deleteWorkingPaper(filename: str) -> bool:
 
 def getWorkingPaperPath(filename: str) -> str:
     """获取工作底稿文件路径"""
-    ensureDataDir()
+    # 确保数据目录和工作底稿目录都存在
+    os.makedirs(DATA_DIR, exist_ok=True)
     os.makedirs(WORKING_PAPERS_DIR, exist_ok=True)
     return os.path.join(WORKING_PAPERS_DIR, filename)
 

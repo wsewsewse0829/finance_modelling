@@ -160,17 +160,15 @@ def _processUpload(new_data: pd.DataFrame, upload_mode: str) -> None:
     """处理数据上传"""
     accounts = loadAccounts()
     
-    # 确保所有情况下都有 combined 变量
-    combined = new_data  # 默认值
-    
     if upload_mode == "追加到现有数据":
+        # 追加模式：保留现有数据，追加新数据
         existing = loadGeneralLedger()
         combined = pd.concat([existing, new_data], ignore_index=True)
-        # 追加模式：不删除旧数据
         saveGeneralLedger(combined, replace=False)
     else:
-        # 替换模式：删除旧数据
+        # 替换模式：删除旧数据，只保留新数据
         saveGeneralLedger(new_data, replace=True)
+        combined = new_data
 
     # 自动生成科目余额表
     trial_balance = generateTrialBalance(combined, accounts)

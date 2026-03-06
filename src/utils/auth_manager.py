@@ -39,9 +39,6 @@ def _get_supabase_client():
     if _supabase_client is None:
         url, key = _get_supabase_credentials()
         
-        st.write(f"调试: URL = {url[:20]}..." if url else "调试: URL = None")
-        st.write(f"调试: Key = {key[:20]}..." if key else "调试: Key = None")
-        
         if not url or not key:
             raise Exception("Supabase 凭证未配置")
         
@@ -55,10 +52,7 @@ def _get_supabase_client():
             if _supabase_client.auth is None:
                 raise Exception("client.auth 为 None，认证模块未正确初始化")
             
-            st.write("调试: Supabase 客户端创建成功")
-            
         except Exception as e:
-            st.write(f"调试: 创建客户端失败: {str(e)}")
             raise Exception(f"创建 Supabase 客户端失败: {str(e)}")
     
     # 再次验证客户端和 auth
@@ -94,16 +88,12 @@ def login(email: str, password: str) -> bool:
         bool: 登录是否成功
     """
     try:
-        st.write("调试: 尝试登录（使用官方 SDK）...")
-        
         # 使用官方 SDK 进行登录
         client = _get_supabase_client()
         response = client.auth.sign_in_with_password({
             "email": email,
             "password": password
         })
-        
-        st.write(f"调试: 登录响应: {response}")
         
         # 检查响应
         if response.user:
@@ -121,7 +111,6 @@ def login(email: str, password: str) -> bool:
             
     except Exception as e:
         error_msg = str(e)
-        st.error(f"登录异常: {error_msg}")
         
         # 友好的错误提示
         if "Invalid login credentials" in error_msg or "invalid login credentials" in error_msg.lower():
@@ -130,6 +119,8 @@ def login(email: str, password: str) -> bool:
             st.error("登录失败：请先验证邮箱")
         elif "No API key found" in error_msg or "No apikey" in error_msg:
             st.error("登录失败：Supabase API Key 配置错误")
+        else:
+            st.error(f"登录失败：{error_msg}")
         
         return False
 
@@ -145,8 +136,6 @@ def register(email: str, password: str) -> bool:
         bool: 注册是否成功
     """
     try:
-        st.write("调试: 尝试注册（使用官方 SDK）...")
-        
         # 使用官方 SDK 进行注册
         client = _get_supabase_client()
         response = client.auth.sign_up({
@@ -156,8 +145,6 @@ def register(email: str, password: str) -> bool:
                 "email_confirm": True  # 自动确认邮箱，无需邮件验证
             }
         })
-        
-        st.write(f"调试: 注册响应: {response}")
         
         # 检查响应
         if response.user:
@@ -170,7 +157,6 @@ def register(email: str, password: str) -> bool:
             
     except Exception as e:
         error_msg = str(e)
-        st.error(f"注册异常: {error_msg}")
         
         # 友好的错误提示
         if "User already registered" in error_msg or "duplicate" in error_msg.lower():
@@ -181,6 +167,8 @@ def register(email: str, password: str) -> bool:
             st.error("注册失败：邮箱格式不正确")
         elif "No API key found" in error_msg or "No apikey" in error_msg:
             st.error("注册失败：Supabase API Key 配置错误")
+        else:
+            st.error(f"注册失败：{error_msg}")
         
         return False
 
