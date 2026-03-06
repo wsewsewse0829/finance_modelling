@@ -226,8 +226,8 @@ def _renderLedgerView() -> None:
         if st.button("🗑️ 清空所有序时账数据", type="secondary"):
             saveGeneralLedger(pd.DataFrame(columns=[
                 "id", "entry_date", "voucher_no", "account_code",
-                "account_name", "debit_amount", "credit_amount", "summary", "user_id"
-            ]))
+                "account_name", "debit_amount", "credit_amount", "summary", "actual_budget"
+            ]), replace=True)
             saveTrialBalance(pd.DataFrame(columns=[
                 "account_code", "account_name", "period",
                 "begin_balance", "debit_total", "credit_total", "end_balance"
