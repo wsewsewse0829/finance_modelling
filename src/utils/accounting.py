@@ -253,11 +253,22 @@ def generateClosingStep1(
     entries_temp = entries.copy()
     entries_temp["account_code"] = entries_temp["account_code"].astype(str)
     
+    # 重命名科目表的 account_name 列，避免与 entries 的 account_name 列冲突
+    accounts_temp = accounts_temp.rename(columns={
+        "account_name": "account_name_accounts"
+    })
+    
     entries_with_type = entries_temp.merge(
-        accounts_temp[["account_code", "account_name", "account_type"]],
+        accounts_temp[["account_code", "account_name_accounts", "account_type"]],
         on="account_code",
         how="left"
     )
+    
+    # 如果原始 entries 有 account_name 列，保留它；否则使用科目表的 account_name
+    if "account_name" in entries_temp.columns:
+        entries_with_type["account_name"] = entries_temp["account_name"].values
+    else:
+        entries_with_type["account_name"] = entries_with_type["account_name_accounts"]
     
     closing_entries = []
     
