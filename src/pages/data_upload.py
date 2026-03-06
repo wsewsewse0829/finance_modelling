@@ -92,7 +92,7 @@ def _renderUploadSection() -> None:
 
             # 显示预览
             st.markdown("#### 📊 数据预览")
-            st.dataframe(df.head(10), use_container_width=True)
+            st.dataframe(df.head(10), width='stretch')
 
             # 校验列名
             missing_cols = [col for col in REQUIRED_COLUMNS if col not in df.columns]
@@ -149,7 +149,7 @@ def _renderUploadSection() -> None:
             )
 
             st.markdown("---")
-            if st.button("📥 确认上传", type="primary", use_container_width=True):
+            if st.button("📥 确认上传", type="primary"):
                 _processUpload(df, upload_mode)
 
         except Exception as e:
@@ -216,7 +216,7 @@ def _renderLedgerView() -> None:
         "summary": "摘要",
     })
 
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
+    st.dataframe(display_df, width='stretch', hide_index=True)
 
     # 清空数据按钮
     st.markdown("---")
@@ -312,7 +312,7 @@ def _renderTemplateDownload() -> None:
     }
 
     template_df = pd.DataFrame(template_data)
-    st.dataframe(template_df, use_container_width=True, hide_index=True)
+    st.dataframe(template_df, width='stretch', hide_index=True)
 
     # 下载按钮
     csv_data = template_df.to_csv(index=False)
@@ -424,8 +424,7 @@ def _renderWorkingPapers() -> None:
                         label="📥 下载",
                         data=file_data,
                         file_name=row['filename'],
-                        key=f"download_{idx}",
-                        use_container_width=True
+                        key=f"download_{idx}"
                     )
                 else:
                     st.warning("文件不存在")

@@ -470,7 +470,7 @@ def _render_entry_preview(entries: pd.DataFrame) -> None:
             display_data = display_data.drop(columns=["debit_amount", "credit_amount"])
             display_data.columns = ["科目编码", "科目名称", "借方金额", "贷方金额"]
             
-            st.dataframe(display_data, use_container_width=True, hide_index=True)
+            st.dataframe(display_data, width='stretch', hide_index=True)
 
 
 def _render_action_buttons(entries: pd.DataFrame, closing_enabled: bool) -> None:
